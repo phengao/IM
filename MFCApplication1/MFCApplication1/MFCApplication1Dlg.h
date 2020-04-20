@@ -135,5 +135,8 @@ public:
 
 	char * CMFCApplication1Dlg::myT2A(CString cstrT2A);
 	int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList, int fdelete);
+	afx_msg void OnBnClickedButton12();
+	int CMFCApplication1Dlg::getpid(CString pname);
+	void CMFCApplication1Dlg::closepid(int pid);
 };
 

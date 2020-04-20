@@ -21,6 +21,11 @@
 #include <iostream>
 #include <shlwapi.h>
 
+#include<iostream>
+#include<Windows.h>
+#include<TlHelp32.h>
+
+
 #pragma comment(lib,"Shlwapi.lib") 
 #pragma comment(lib, "cryptlib.lib")
 using namespace CryptoPP;
@@ -136,6 +141,7 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON8, &CMFCApplication1Dlg::OnBnClickedButton8)
 	ON_BN_CLICKED(IDC_BUTTON9, &CMFCApplication1Dlg::OnBnClickedButton9)
 	ON_BN_CLICKED(IDC_BUTTON10, &CMFCApplication1Dlg::OnBnClickedButton10)
+	ON_BN_CLICKED(IDC_BUTTON12, &CMFCApplication1Dlg::OnBnClickedButton12)
 END_MESSAGE_MAP()
 
 
@@ -244,6 +250,7 @@ void CMFCApplication1Dlg::OnBnClickedButton1()
 	
 	start = clock();
 	
+
 	strdir = mEditFolderName;// "e:";
 
 	CFile fileList;
@@ -494,6 +501,12 @@ bool CMFCApplication1Dlg::my_CreateProcess(CString epath)
 	SetStartInfo(si);
 	epath.Replace(_T('\\'), _T('/'));
 	CString wpath = epath.Left(epath.ReverseFind(_T('/')));
+	CString pname = epath.Right(epath.GetLength() - epath.ReverseFind(_T('/')));
+	int pid=0;
+	while (pid = getpid(pname)) {
+		closepid(pid);
+	}
+
 	if (proFlg) {
 		ColseChildProcess();
 		proFlg = 0;
@@ -580,10 +593,11 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 
 			long needTime = (pthis->clockCurrent - pthis->clockStart) * (pthis->fileCount - pthis->fileGrow) / pthis->fileGrow / CLOCKS_PER_SEC;
 
-			cstrProgress.Format(_T("%s  %d/%d 【%02d:%02d:%02d】 ")
+			cstrProgress.Format(_T("%s  %d/%d 【%02d:%02d:%02d】 %s")
 								, pthis->cstrStatichead, pthis->fileGrow, pthis->fileCount
-								,needTime/3600,(needTime%3600)/60,(needTime%60));
-			AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(cstrProgress + strd.Right(strd.GetLength() - npos-15));
+								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15));
+			cstrProgress.Replace(pthis->mEditFolderName, _T("\x7e"));
+			AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(cstrProgress);
 			//AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC)->SetWindowText(strd);
 
 		}
@@ -1249,7 +1263,7 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 					strLeft = rstr.Left(nPos);
 					if (!strLeft.IsEmpty())
 						strResult.Add(strLeft);
-					rstr = rstr.Right(CStringA(rstr).GetLength() - nPos - 1);
+					rstr = rstr.Right(rstr.GetLength() - nPos - 1);
 					nPos = rstr.Find(strGap);
 					if (nPos == -1) {
 						strResult.Add(rstr);
@@ -1465,7 +1479,7 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 
 						if (nPos > 0) {
 							itemp = itemp.Left(nPos);
-							nPos = rfstr.Find(itemp);
+							nPos = rfstr.Find(_T("_")+itemp);
 							if (nPos == -1) {// there is no itmp in rfstr
 								rfstr += _T("_") + itemp;
 							}
@@ -1559,4 +1573,59 @@ int CMFCApplication1Dlg::cuntFiles(CString cstrFile)
 char * CMFCApplication1Dlg::myT2A(CString cstrT2A)
 {
 	return nullptr;
+}
+
+
+void CMFCApplication1Dlg::OnBnClickedButton12()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	mEdit1 = _T("");
+	UpdateData(false);
+}
+
+int CMFCApplication1Dlg::getpid(CString pname)
+{
+	PROCESSENTRY32 pe;
+	int pid = 0;
+	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	pe.dwSize = sizeof(PROCESSENTRY32);
+	TCHAR *ch;// = new TCHAR[MAX_PATH];
+	//memset(ch, 0, sizeof(ch));
+	ch = pname.GetBuffer(pname.GetLength());
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		return 0;
+	}
+	if (!::Process32First(hSnapshot, &pe))
+		return 0;
+	while (1)
+	{
+		pe.dwSize = sizeof(PROCESSENTRY32);
+		if ((_tcscmp(ch, pe.szExeFile)) == 0)
+		{
+			pid = pe.th32ProcessID;
+			break;
+		}
+		if (::Process32Next(hSnapshot, &pe) == FALSE)
+			break;
+	}
+	//CloseHandle(hSnapshot);
+	//delete []ch;//delete(ch);
+	CloseHandle(hSnapshot);
+	return pid;
+}
+
+//close V3Monitor.exe  
+void CMFCApplication1Dlg::closepid(int pid)
+{
+	HANDLE hProcess;
+	DWORD dwPriorityClass;
+	//打开进程句柄  
+	hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+	if (hProcess == NULL) return;
+	dwPriorityClass = GetPriorityClass(hProcess);
+	if (dwPriorityClass == 0) return;
+	if (!TerminateProcess(hProcess, 1)) return;
+	CloseHandle(hProcess);
+	return;
 }

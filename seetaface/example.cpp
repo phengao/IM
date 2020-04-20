@@ -252,7 +252,7 @@ int identify_pic() {
 				///std::cout << "top_person:" << GalleryIndexMap[index] << std::endl;
 				
 				// similarity greater than threshold, means recognized
-				if (similarity > threshold)
+				if (similarity > 0.4)
 				{
 					///std::cout << "right_person:" << GalleryIndexMap[index] << std::endl;
 					cv::putText(frame, GalleryIndexMap[index], cv::Point(face.pos.x, face.pos.y - 5), 3, 1, CV_RGB(255, 128, 128));
@@ -261,9 +261,12 @@ int identify_pic() {
 					string tmp = GalleryIndexMap[index].substr(iPos, GalleryIndexMap[index].length() - iPos);
 
 					tmp = tmp.substr(0, tmp.rfind("."));
-					if (strrus.find(tmp)==tmp.npos) {
-						
-						strrus.append("\x09" + tmp + "-" + std::to_string(similarity));
+					if (strrus.find("\x09"+tmp)==tmp.npos) {
+						if(similarity>0.5)
+							strrus.append("\x09" + tmp + "-" + std::to_string(similarity));
+						else
+							strrus.append("\x09ËÆ" + tmp + "-" + std::to_string(similarity));
+
 					}
 				}
 				else {
@@ -274,7 +277,7 @@ int identify_pic() {
 			ofs.write(strrus.c_str(), strlen(strrus.c_str()));
 
 
-			char showflg = 0;
+			char showflg = 1;
 
 			if (showflg) {
 				cv::namedWindow("Compare_Result", 0);
