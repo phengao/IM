@@ -26,6 +26,13 @@
 #include<TlHelp32.h>
 
 
+#include "stdafx.h"
+#include <Windows.h>
+#include "folder_dialog.h"
+
+using namespace std;
+//using namespace BaseFunc;
+
 #pragma comment(lib,"Shlwapi.lib") 
 #pragma comment(lib, "cryptlib.lib")
 using namespace CryptoPP;
@@ -717,7 +724,55 @@ int CMFCApplication1Dlg::ColseChildProcess()
 }
 
 
+
+unsigned CMFCApplication1Dlg::selFile(CString &strFile, const CString &strExt, bool bOpen)
+{
+	CString strDir = _T("D:\\imageManage");//这里通过strFile解析目录,CFileDialog会自动记住
+	CString filename = _T("hi.txt");  //通过strFile解析文件名
+	CString filter = strExt + "文件 (*." + strExt + ")|*." + strExt + "||";
+	CString ext = _T(".") + strExt;
+
+
+	CFileDialog dlg(((bool)bOpen, _T("*..*"), filename, OFN_READONLY | OFN_OVERWRITEPROMPT, filter, NULL));
+	
+	dlg.GetOFN().lpstrInitialDir = strFile;// 默认目录
+
+	if (dlg.DoModal())
+	{
+		strFile = dlg.GetPathName();
+		return IDOK;
+	}
+
+	return IDCANCEL;
+}
+
 void CMFCApplication1Dlg::OnBnClickedChooseFolder()
+{
+	CString path;
+	//selFile(path, NULL, 1);
+	CString pathSelected;
+	CString dpath;
+	if(mEditFolderName==_T(""))
+		dpath = getWorkDir();
+	else {
+		dpath = mEditFolderName ;
+		dpath.Replace(_T("/"), _T("\\"));
+	}
+
+	CFolderDialog dlg(&pathSelected,dpath);
+	if (dlg.DoModal() == IDOK)
+	{
+		mEditFolderName = pathSelected;
+		mEditFolderName.Replace(_T("\\"), _T("/"));
+		cfgRead(pszFileName);
+		CFGStr[0] = mEditFolderName;
+		cfgWrite(pszFileName, CFGStr);
+	}
+	else
+		AfxMessageBox(_T("无效的目录，请重新选择"));
+	this->UpdateData(false);
+}
+void CMFCApplication1Dlg::OnBnClickedChooseFolder_older()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	char szPath[MAX_PATH];     //存放选择的目录路径 
