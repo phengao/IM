@@ -140,5 +140,8 @@ public:
 	void CMFCApplication1Dlg::closepid(int pid);
 	void CMFCApplication1Dlg::OnBnClickedChooseFolder_older();
 	unsigned CMFCApplication1Dlg::selFile(CString &strFile, const CString &strExt, bool bOpen);
+	char m_threadrun = 1;
+	HANDLE m_hThread;
+	void dopreexit();
 };
 

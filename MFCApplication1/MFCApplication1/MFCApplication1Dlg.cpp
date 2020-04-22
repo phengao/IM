@@ -288,8 +288,6 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 {
 	CFileFind filefind;                                         //声明CFileFind类型变量
 	CFile file;
-	short int buf[1024 * 102];//读1M
-	BYTE digest[512];
 	Weak::MD5 hash;
 	CString strWildpath = strDir + _T("/*.*");     //所有jpg文件都列出。
 
@@ -328,7 +326,7 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 				systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
 
 			CString strlen;
-			strlen.Format(_T("%ld"), filefind.GetLength());
+			strlen.Format(_T("%ull"), filefind.GetLength());
 
 			CString strFilePath = (LPCTSTR)filefind.GetFilePath();
 
@@ -442,7 +440,8 @@ void CMFCApplication1Dlg::my_PipeInit()
 
 	LPVOID *plp = (LPVOID *)&pRecvParam;
 	RECVPAR *lp = (RECVPAR *)plp;
-	HANDLE hThread = CreateThread(NULL, 0, Pipe_Listen, (LPVOID)&pRecvParam, 0, NULL);	//创建socket的发送线程
+	m_threadrun = 1;
+	m_hThread = CreateThread(NULL, 0, Pipe_Listen, (LPVOID)&pRecvParam, 0, NULL);	//创建socket的发送线程
 }
 
 void CMFCApplication1Dlg::SetSecurity_attr(SECURITY_ATTRIBUTES& ps)
@@ -495,7 +494,7 @@ void CMFCApplication1Dlg::my_SendDataPipe(CString data)
 
 	//写入数据
 	if (!pipeflg) return;
-	if (!WriteFile(m_hPipeWriteChildDetect, (LPCTSTR)cp, strlen(cp), &data_write, NULL))
+	if (!WriteFile(m_hPipeWriteChildDetect, (LPCTSTR)cp, (UINT)strlen(cp), &data_write, NULL))
 	{
 		//MessageBox(_T("client send data:"));
 	}
@@ -540,16 +539,17 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 	CMFCApplication1Dlg *pthis = lp->ptr;
 	HANDLE PipeRead = lp->sock;
 	HANDLE* hw = &lp->hw;
-	CHAR data[4096] = { 0 };
+	CHAR data[2048] = { 0 };
 	DWORD data_read;
 	CString cstrProgress;
 	int npos;
-	wchar_t *wp = new wchar_t[4096 + 1];//new一块新内存
+	wchar_t wca[4096 + 1] = { 0 };
+	wchar_t *wp = wca;
 
-	while (true)
+	while (pthis->m_threadrun==1)
 	{
 		memset(data, 0, sizeof(data));
-		if (!ReadFile((HANDLE)(PipeRead), data, 4096, &data_read, NULL))
+		if (!ReadFile((HANDLE)(PipeRead), data, sizeof(data), &data_read, NULL))
 			continue;
 		time_t finish;
 		time(&finish);
@@ -559,9 +559,9 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 
 		//USES_CONVERSION;
 		//CString strd = A2T(data);
-
-		LONGLONG unicodefilelen = MultiByteToWideChar(CP_ACP, 0, data, strlen(data), NULL, 0);//把ansi文件长度转为Unicode文件长度
-		MultiByteToWideChar(CP_ACP, 0, data, strlen(data), wp, unicodefilelen);//把读到的文件转成宽字符
+		memset(wca, 0, sizeof(wca));
+		int unicodefilelen = MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), NULL, 0);//把ansi文件长度转为Unicode文件长度
+		MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), wp, (int)unicodefilelen);//把读到的文件转成宽字符
 		wp[unicodefilelen] = '\0';
 
 		strd = wp;
@@ -580,7 +580,7 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 			}
 		}
 		if (strd.Find(_T("Identify finished")) != -1) {
-			if (pthis->autoFlg) {
+			if (pthis->autoFlg) { 
 				pthis->OnBnClickedButton9();
 				pthis->autoFlg = 0;
 			}
@@ -601,8 +601,8 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 			long needTime = (pthis->clockCurrent - pthis->clockStart) * (pthis->fileCount - pthis->fileGrow) / pthis->fileGrow / CLOCKS_PER_SEC;
 
 			cstrProgress.Format(_T("%s  %d/%d 【%02d:%02d:%02d】 %s")
-								, pthis->cstrStatichead, pthis->fileGrow, pthis->fileCount
-								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15));
+								, pthis->cstrStatichead.GetBuffer(), pthis->fileGrow, pthis->fileCount
+								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15).GetBuffer());
 			cstrProgress.Replace(pthis->mEditFolderName, _T("\x7e"));
 			AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(cstrProgress);
 			//AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC)->SetWindowText(strd);
@@ -611,8 +611,9 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 		AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SetWindowText(str);
 		AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SendMessage(WM_VSCROLL, SB_BOTTOM, 0);
 	}
-
-	return data_read;
+	pthis->m_threadrun = 2;
+	ExitThread(0);
+	//return data_read;
 }
 
 
@@ -625,7 +626,7 @@ void CMFCApplication1Dlg::OnBnClickedButtonIdentify()
 	fileCount = cuntFiles(cstrIListFile);
 	fileGrow = 0;
 	clockStart = clock();
-	str.Format(_T("%s %d/%d "), cstrStatichead, fileGrow,fileCount);
+	str.Format(_T("%s %d/%d "), cstrStatichead.GetBuffer(0), fileGrow,fileCount);
 	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(str);
 
 	getGalleryFileList(cstrGalleryFile, NULL);
@@ -634,9 +635,9 @@ void CMFCApplication1Dlg::OnBnClickedButtonIdentify()
 
 	str = _T("IdenTifY ") + cstrGalleryFile + _T(" ") + cstrIListFile + _T(" ") + cstrIdentifiedFile;
 	my_SendDataPipe(str);
-	this->UpdateData(true);
-	this->mEdit1 += _T("P[") + str + _T("]\r\n");
-	this->UpdateData(false);
+	UpdateData(true);
+	mEdit1 += _T("P[") + str + _T("]\r\n");
+	UpdateData(false);
 }
 
 
@@ -650,7 +651,7 @@ void CMFCApplication1Dlg::OnBnClickedButtonDetect()
 	fileGrow = 0;
 	clockStart = clock();
 
-	str.Format(_T("%s %d/%d "), cstrStatichead, fileGrow, fileCount);
+	str.Format(_T("%s %d/%d "), cstrStatichead.GetBuffer(), fileGrow, fileCount);
 	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(str);
 
 
@@ -659,9 +660,9 @@ void CMFCApplication1Dlg::OnBnClickedButtonDetect()
 
 	str = _T("DetecT ") + cstrListFile + _T(" ") + cstrDetctedFile; // send the command and detect filet and detected file
 	my_SendDataPipe(str);
-	this->UpdateData(true);
-	this->mEdit1 += _T("P[") + str + _T("]\r\n");
-	this->UpdateData(false);
+	UpdateData(true);
+	mEdit1 += _T("P[") + str + _T("]\r\n");
+	UpdateData(false);
 }
 
 
@@ -671,9 +672,9 @@ void CMFCApplication1Dlg::OnBnClickedButtonStop()
 	CString str;
 	str = "QUIT";
 	my_SendDataPipe(str);
-	this->UpdateData(true);
-	this->mEdit1 += _T("P[") + str + _T("]\r\n");
-	this->UpdateData(false);
+	UpdateData(true);
+	mEdit1 += _T("P[") + str + _T("]\r\n");
+	UpdateData(false);
 }
 
 
@@ -683,15 +684,16 @@ void CMFCApplication1Dlg::OnBnClickedButtonIdentifyDefaul()
 	CString str;
 	str = "test";
 	my_SendDataPipe(str);
-	this->UpdateData(true);
-	this->mEdit1 += _T("P[") + str + _T("]\r\n");
-	this->UpdateData(false);
+	UpdateData(true);
+	mEdit1 += _T("P[") + str + _T("]\r\n");
+	UpdateData(false);
 }
 
 void CMFCApplication1Dlg::OnClose()
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	ColseChildProcess();	
+	//ColseChildProcess();	
+	dopreexit();
 	CDialogEx::OnClose();
 }
 
@@ -699,7 +701,8 @@ void CMFCApplication1Dlg::OnClose()
 void CMFCApplication1Dlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	ColseChildProcess();
+	//ColseChildProcess();	
+	dopreexit();
 	CDialogEx::OnOK();
 }
 
@@ -707,7 +710,8 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 void CMFCApplication1Dlg::OnBnClickedCancel()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	ColseChildProcess(); 
+	//ColseChildProcess(); 
+	dopreexit();
 	CDialogEx::OnCancel();
 }
 
@@ -717,9 +721,9 @@ int CMFCApplication1Dlg::ColseChildProcess()
 	CString str;
 	str = "QUIT";
 	my_SendDataPipe(str);
-	this->UpdateData(true);
-	this->mEdit1 += _T("P[") + str + _T("]\r\n");
-	this->UpdateData(false);
+	UpdateData(true);
+	mEdit1 += _T("P[") + str + _T("]\r\n");
+	UpdateData(false);
 	return 0;
 }
 
@@ -729,7 +733,7 @@ unsigned CMFCApplication1Dlg::selFile(CString &strFile, const CString &strExt, b
 {
 	CString strDir = _T("D:\\imageManage");//这里通过strFile解析目录,CFileDialog会自动记住
 	CString filename = _T("hi.txt");  //通过strFile解析文件名
-	CString filter = strExt + "文件 (*." + strExt + ")|*." + strExt + "||";
+	CString filter = strExt + _T("文件 (*.") + strExt + _T(")|*.") + strExt + _T("||");
 	CString ext = _T(".") + strExt;
 
 
@@ -770,44 +774,7 @@ void CMFCApplication1Dlg::OnBnClickedChooseFolder()
 	}
 	else
 		AfxMessageBox(_T("无效的目录，请重新选择"));
-	this->UpdateData(false);
-}
-void CMFCApplication1Dlg::OnBnClickedChooseFolder_older()
-{
-	// TODO: 在此添加控件通知处理程序代码
-	char szPath[MAX_PATH];     //存放选择的目录路径 
-	CString str;
-
-	ZeroMemory(szPath, sizeof(szPath));
-
-	USES_CONVERSION;
-	char* cp = T2A(mEditFolderName);
-
-	memcpy(szPath, cp, strlen(cp));
-
-	BROWSEINFO bi;
-	bi.hwndOwner = m_hWnd;
-	bi.pidlRoot = NULL;
-	bi.pszDisplayName = (LPWSTR)szPath;
-	bi.lpszTitle = _T("请选择需要打包的目录：");
-	bi.ulFlags = 0;
-	bi.lpfn = NULL;
-	bi.lParam = 0;
-	bi.iImage = 0;
-	//弹出选择目录对话框
-	LPITEMIDLIST lp = SHBrowseForFolder(&bi);
-
-	if (lp && SHGetPathFromIDList(lp, (LPWSTR)szPath))
-	{
-		mEditFolderName = (LPWSTR)szPath;
-		mEditFolderName.Replace(_T("\\"), _T("/"));
-		cfgRead(pszFileName);
-		CFGStr[0] = mEditFolderName;
-		cfgWrite(pszFileName,CFGStr);
-	}
-	else
-		AfxMessageBox(_T("无效的目录，请重新选择"));
-	this->UpdateData(false);
+	UpdateData(false);
 }
 
 int CMFCApplication1Dlg::cfgRead(CString fstr)
@@ -857,7 +824,7 @@ int CMFCApplication1Dlg::cfgWrite(CString fstr, CString *wstr)
 		USES_CONVERSION;
 		char* cp = T2A(wstr[i]+_T("\r\n"));
 
-		f.Write(cp, strlen(cp));
+		f.Write(cp, (UINT)strlen(cp));
 	}
 	return 0;
 }
@@ -879,7 +846,7 @@ int CMFCApplication1Dlg::cfgDefault(CString fstr)
 		USES_CONVERSION;
 		char* cp = T2A(dstr);
 
-		f.Write(cp, strlen(cp));
+		f.Write(cp, (UINT)strlen(cp));
 	}
 
 	return 0;
@@ -946,8 +913,8 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 		CString strDate, strTime;
 		GetLocalTime(&st);
 		rcstr.Format(_T("%s m:%04d-%02d-%02d %02d:%02d:%02d c:%04d-%02d-%02d %02d:%02d:%02d\r\n")
-			, cstrChangestart, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond
-			, cstrChangestart, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+			, cstrChangestart.GetBuffer(), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond
+			, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
 
 		CString fstr, rfstr;
@@ -977,7 +944,7 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 					}
 				}
 
-				cnt = strResult.GetSize();
+				cnt = (int)strResult.GetSize();
 				if (cnt==2) {// got gap "\x09"
 					fstr = strResult.GetAt(0);
 					rfstr = strResult.GetAt(1);
@@ -996,16 +963,16 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 							
 							if (strlen(cp) < 512) {
 								memset(rdbuf, 0, sizeof(rdbuf));
-								rdlen = strlen(cp);
+								rdlen = (UINT)strlen(cp);
 								//rdlen = 0;
 								rdlen = fw.Read(rdbuf, rdlen);
-								rdlen = strlen(rdbuf);
+								rdlen = (UINT)strlen(rdbuf);
 								if (rdlen > 0) {
 									cstrArdbuf.Add(A2T(rdbuf));
 									fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 								}
 							}
-							fw.Write(cp, strlen(cp));
+							fw.Write(cp, (UINT)strlen(cp));
 							rcstr = "";
 						}
 					}
@@ -1025,13 +992,13 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 			if (strlen(cp) < 512) {
 				memset(rdbuf, 0, sizeof(rdbuf));
 				rdlen = 0;
-				rdlen = fw.Read(rdbuf, strlen(cp));
+				rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
 				if (rdlen > 0) {
 					cstrArdbuf.Add(A2T(rdbuf));
 					fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 				}
 			}
-			fw.Write(cp, strlen(cp));
+			fw.Write(cp, (UINT)strlen(cp));
 		}
 
 		if (cstrArdbuf.GetSize()) {
@@ -1045,13 +1012,13 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 				if (strlen(cp) < 512) {
 					memset(rdbuf, 0, sizeof(rdbuf));
 					rdlen = 0;
-					rdlen = fw.Read(rdbuf, strlen(cp));
+					rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
 					if (rdlen > 0) {//Return Value ,The number of bytes transferred to the buffer.
 						cstrArdbuf.Add(A2T(rdbuf));
 						fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 					}
 				}
-				fw.Write(cp, strlen(cp));
+				fw.Write(cp, (UINT)strlen(cp));
 				memcpy(trdbuf, rdbuf, sizeof(rdbuf));
 				//fflush(fw.h);
 			}
@@ -1082,8 +1049,8 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 	CFileException e;
 	int rdlen = 0;
 
-	char rdbuf[512];
-	char trdbuf[512];
+
+
 
 
 	char* old_locale = _strdup(setlocale(LC_CTYPE, NULL));
@@ -1109,7 +1076,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 		}
 		LONGLONG ansifilelen = fw.GetLength();//获得ansi编码文件的文件长度
 		char *p = new char[ansifilelen + 1];//new一块新内存
-		fw.Read(p, ansifilelen);
+		fw.Read(p, (int)ansifilelen);
 		p[ansifilelen] = '\0';
 		fw.Close();
 
@@ -1126,7 +1093,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 		CString strDate, strTime;
 		GetLocalTime(&st);
 		rcstr.Format(_T("%s m:%04d-%02d-%02d %02d:%02d:%02d c:%04d-%02d-%02d %02d:%02d:%02d\r\n")
-			, cstrChangestart, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond
+			, cstrChangestart.GetBuffer(), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond
 			, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
 
@@ -1159,7 +1126,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 					}
 				}
 
-				cnt = strResult.GetSize();
+				cnt = (int)strResult.GetSize();
 				if (cnt == 2) {// got gap "\x09"
 					fstr = strResult.GetAt(0);
 					rfstr = strResult.GetAt(1);
@@ -1181,16 +1148,16 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 							/*
 							if (strlen(cp) < 512) {
 								memset(rdbuf, 0, sizeof(rdbuf));
-								rdlen = strlen(cp);
+								rdlen = (UINT)strlen(cp);
 								//rdlen = 0;
 								rdlen = fw.Read(rdbuf, rdlen);
-								rdlen = strlen(rdbuf);
+								rdlen = (UINT)strlen(rdbuf);
 								if (rdlen > 0) {
 									cstrArdbuf.Add(A2T(rdbuf));
 									fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 								}
 							}*/
-							//fw.Write(cp, strlen(cp));
+							//fw.Write(cp, (UINT)strlen(cp));
 							fw.Write(cp, wlen);
 							rcstr = "";
 						}
@@ -1213,13 +1180,13 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 			if (strlen(cp) < 512) {
 				memset(rdbuf, 0, sizeof(rdbuf));
 				rdlen = 0;
-				rdlen = fw.Read(rdbuf, strlen(cp));
+				rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
 				if (rdlen > 0) {
 					cstrArdbuf.Add(A2T(rdbuf));
 					fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 				}
 			}*/
-			//fw.Write(cp, strlen(cp));
+			//fw.Write(cp, (UINT)strlen(cp));
 			fw.Write(cp, wlen);
 		}
 		/*
@@ -1234,18 +1201,18 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 				if (strlen(cp) < 512) {
 					memset(rdbuf, 0, sizeof(rdbuf));
 					rdlen = 0;
-					rdlen = fw.Read(rdbuf, strlen(cp));
+					rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
 					if (rdlen > 0) {//Return Value ,The number of bytes transferred to the buffer.
 						cstrArdbuf.Add(A2T(rdbuf));
 						fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
 					}
 				}
-				fw.Write(cp, strlen(cp));
+				fw.Write(cp, (UINT)strlen(cp));
 				memcpy(trdbuf, rdbuf, sizeof(rdbuf));
 				//fflush(fw.h);
 			}
 		}*/
-		fw.Write(p, strlen(p));
+		fw.Write(p, (UINT)strlen(p));
 		fw.Close();
 	}
 	fs.Close();
@@ -1269,7 +1236,7 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 	CStdioFile fs;// chang list file write
 	CFileException e;
 	int rflg = 0;
-	int wpos = 0;
+	LONGLONG wpos = 0;
 	char* old_locale = _strdup(setlocale(LC_CTYPE, NULL));
 	setlocale(LC_CTYPE, "chs");
 
@@ -1326,7 +1293,7 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 					}
 				}
 
-				cnt = strResult.GetSize();
+				cnt = (int)strResult.GetSize();
 				if (cnt == 2) {// got gap "\x09"
 					rfstr = strResult.GetAt(0);
 					fstr = strResult.GetAt(1);
@@ -1352,12 +1319,12 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 		CString strDate;
 		GetLocalTime(&st);
 		strDate.Format(_T("%s m:%04d-%02d-%02d %02d:%02d:%02d")
-			, cstrChangeUndo, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+			, cstrChangeUndo.GetBuffer(), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
 		USES_CONVERSION;
 		char *cp = T2A(strDate);
 		// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
-		fs.Write(cp, strlen(cp));
+		fs.Write(cp, (UINT)strlen(cp));
 	}
 	fs.Close();
 	setlocale(LC_CTYPE, old_locale); //还原语言区域的设置 
@@ -1511,7 +1478,7 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 					//cnt++;
 				}
 
-				cnt = strResult.GetSize();
+				cnt = (int)strResult.GetSize();
 				if (cnt) {// got gap "\x09"
 					CString suffix = _T("");
 					int pcnt = 0;
@@ -1550,11 +1517,11 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 
 						if (rfstr.Find(_T("_person")) > 0) {
 							if (cstrListout != "") {
-								fw.Write(cp, strlen(cp));
+								fw.Write(cp, (UINT)strlen(cp));
 							}
 						}
 						cp = T2A(fstr + _T("\x09") + rfstr + _T("\r\n"));
-						cfw.Write(cp, strlen(cp));
+						cfw.Write(cp, (UINT)strlen(cp));
 						//CFile::Rename(strResult.GetAt(0), rfstr);
 					}
 					else {
@@ -1683,4 +1650,12 @@ void CMFCApplication1Dlg::closepid(int pid)
 	if (!TerminateProcess(hProcess, 1)) return;
 	CloseHandle(hProcess);
 	return;
+}
+
+void CMFCApplication1Dlg::dopreexit()
+{
+	m_threadrun = 0;
+	ColseChildProcess();
+	TerminateThread(m_hThread, 0);
+
 }
