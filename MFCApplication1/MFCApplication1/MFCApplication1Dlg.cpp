@@ -34,8 +34,8 @@ using namespace std;
 //using namespace BaseFunc;
 
 #pragma comment(lib,"Shlwapi.lib") 
-#pragma comment(lib, "cryptlib.lib")
-using namespace CryptoPP;
+//#pragma comment(lib, "cryptlib.lib")
+//using namespace CryptoPP;
 
 
 #ifdef _DEBUG
@@ -84,21 +84,32 @@ CMFCApplication1Dlg::CMFCApplication1Dlg(CWnd* pParent /*=NULL*/)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
+	cstrWorkDir = getWorkDir();
 	if (MDEBUG) {
 		CString strdebug = getWorkDir();
-		strdebug.Replace(_T('\\'), _T('/'));
+		//strdebug.Replace(_T('\\'), _T('/'));
 
-		pszFileName = strdebug + _T("/../x64/release/cfg.txt");
-		cstrListFile = strdebug + _T("/../x64/release/Filelist.txt");// keep all files in the setting floder
-		cstrDetctedFile = strdebug + _T("/../x64/release/Detctedlist.txt");// keep all files detected results
-		cstrIListFile = strdebug + _T("/../x64/release/IFilelist.txt");// files to identify
-		cstrGalleryFile = strdebug + _T("/../x64/release/Gallerylist.txt");// pictures for identify database
-		cstrIdentifiedFile = strdebug + _T("/../x64/release/Identifiedlist.txt");// pictures for identify results
-		cstrChangeFile = strdebug + _T("/../x64/release/Changelist.txt");// file names which has been changed
-		cstrDarkexeName = strdebug + _T("/../x64/release/darknet_no_gpu.exe");
-		cstrSearchexeName = strdebug + _T("/../x64/release/search.exe");
+		pszFileName = strdebug + _T("\\..\\x64\\release\\cfg.txt");
+		cstrListFile = strdebug + _T("\\..\\x64\\release\\Filelist.txt");// keep all files in the setting floder
+		cstrDetctedFile = strdebug + _T("\\..\\x64\\release\\Detctedlist.txt");// keep all files detected results
+		cstrIListFile = strdebug + _T("\\..\\x64\\release\\IFilelist.txt");// files to identify
+		cstrGalleryFile = strdebug + _T("\\..\\x64\\release\\Gallerylist.txt");// pictures for identify database
+		cstrIdentifiedFile = strdebug + _T("\\..\\x64\\release\\Identifiedlist.txt");// pictures for identify results
+		cstrChangeFile = strdebug + _T("\\..\\x64\\release\\Changelist.txt");// file names which has been changed
+		cstrDarkexeName = strdebug + _T("\\..\\x64\\release\\darknet_no_gpu.exe");
+		cstrSearchexeName = strdebug + _T("\\..\\x64\\release\\search.exe");
 	}
-
+	else {
+		pszFileName = cstrWorkDir + _T("\\") + pszFileName;
+		cstrListFile = cstrWorkDir + _T("\\") + cstrListFile;
+		cstrDetctedFile = cstrWorkDir + _T("\\") + cstrDetctedFile;
+		cstrIListFile = cstrWorkDir + _T("\\") + cstrIListFile;
+		cstrGalleryFile = cstrWorkDir + _T("\\") + cstrGalleryFile;
+		cstrIdentifiedFile = cstrWorkDir + _T("\\") + cstrIdentifiedFile;
+		cstrChangeFile = cstrWorkDir + _T("\\") + cstrChangeFile;
+		///cstrDarkexeName = strdebug + _T("\\..\\x64\\release\\darknet_no_gpu.exe");
+		///cstrSearchexeName = strdebug + _T("\\..\\x64\\release\\search.exe");
+	}
 
 	strAllFile = _T("");
 	ldFileCnt = 0;
@@ -288,8 +299,9 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 {
 	CFileFind filefind;                                         //声明CFileFind类型变量
 	CFile file;
-	Weak::MD5 hash;
-	CString strWildpath = strDir + _T("/*.*");     //所有jpg文件都列出。
+	char cp[MAX_PATH * 2 + 2 + 1];
+	
+	CString strWildpath = strDir + _T("\\*.*");     //所有jpg文件都列出。
 
 	if (filefind.FindFile(strWildpath, 0))                    //开始检索文件
 	{
@@ -326,7 +338,7 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 				systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
 
 			CString strlen;
-			strlen.Format(_T("%ull"), filefind.GetLength());
+			strlen.Format(_T("%I64d"), filefind.GetLength());
 
 			CString strFilePath = (LPCTSTR)filefind.GetFilePath();
 
@@ -388,17 +400,18 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 				*/
 				strwrite += _T("\r\n");
 				int len = CStringA(strwrite).GetLength();
-				strwrite.Replace(_T('\\'), _T('/'));
+				//strwrite.Replace(_T('\\'), _T('/'));
 
-				USES_CONVERSION;
-				char* cp = T2A(strwrite);
+				///USES_CONVERSION;
+				///char* cp = T2A(strwrite);
+				ST2A(strwrite, cp, sizeof(cp));
 
 				fp->Write(cp, len);
 				
 			}
 			else                                                   //如果是子目录，递归调用该函数
 			{
-				CString strNewDir = strDir + CString(_T("/")) + filefind.GetFileName();
+				CString strNewDir = strDir + CString(_T("\\")) + filefind.GetFileName();
 				ldPathCnt++;
 
 				TravelFolder(strNewDir,fp);//递归调用该函数打印子目录里的文件
@@ -423,8 +436,8 @@ CString CMFCApplication1Dlg::charToHexCString(BYTE *ca, int len)
 void CMFCApplication1Dlg::my_PipeInit()
 {
 	if (!my_CreatePipe()) return;
-	//LPWSTR exe_path = _T("D:/imageManage/seetaface/src/SeetaFace2-master/build/bin/Release/search.exe");
-	//CString exe_path = _T("D:/imageManage/MFCApplication1/x64/darknet_no_gpu.exe");
+	//LPWSTR exe_path = _T("D:\\imageManage\\seetaface\\src\\SeetaFace2-master\\build\\bin\\Release\\search.exe");
+	//CString exe_path = _T("D:\\imageManage\\MFCApplication1\\x64\\darknet_no_gpu.exe");
 	/*
 	if (!my_CreateProcess(cstrDarkexeName)) {
 		CloseHandle(m_hPipeWriteParentDetect);	//创建进程失败，关闭读写句柄
@@ -464,7 +477,7 @@ void CMFCApplication1Dlg::SetStartInfo(STARTUPINFO& si)
 	//子进程的标准输出句柄为父进程管道的写数据句柄
 	si.hStdOutput = m_hPipeWriteParentDetect;
 	//子进程的标准错误处理句柄和父进程的标准错误处理句柄一致
-	si.hStdError = HANDLE(STD_ERROR_HANDLE);
+	si.hStdError = HANDLE((LONG)STD_ERROR_HANDLE);
 }
 
 bool CMFCApplication1Dlg::my_CreatePipe()
@@ -488,9 +501,11 @@ bool CMFCApplication1Dlg::my_CreatePipe()
 void CMFCApplication1Dlg::my_SendDataPipe(CString data)
 {
 	DWORD data_write;
+	char cp[MAX_PATH * 2 + 2 + 1];
 
-	USES_CONVERSION;
-	char* cp = T2A(data);
+	//USES_CONVERSION;
+	//char* cp = T2A(data);
+	ST2A(data, cp, sizeof(cp));
 
 	//写入数据
 	if (!pipeflg) return;
@@ -505,9 +520,9 @@ bool CMFCApplication1Dlg::my_CreateProcess(CString epath)
 	PROCESS_INFORMATION pi = { 0 };
 	STARTUPINFO si;
 	SetStartInfo(si);
-	epath.Replace(_T('\\'), _T('/'));
-	CString wpath = epath.Left(epath.ReverseFind(_T('/')));
-	CString pname = epath.Right(epath.GetLength() - epath.ReverseFind(_T('/')));
+	//epath.Replace(_T('\\'), _T('/'));
+	CString wpath = epath.Left(epath.ReverseFind(_T('\\')));
+	CString pname = epath.Right(epath.GetLength() - epath.ReverseFind(_T('\\')));
 	int pid=0;
 	while (pid = getpid(pname)) {
 		closepid(pid);
@@ -519,7 +534,7 @@ bool CMFCApplication1Dlg::my_CreateProcess(CString epath)
 	}
 	//BOOL kk = CreateProcess(epath, NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, wpath, &si, &pi);
 	CString cstrdir = getWorkDir();
-	cstrdir.Replace(_T('\\'), _T('/'));
+	//cstrdir.Replace(_T('\\'), _T('/'));
 	BOOL kk = CreateProcess(epath, NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, cstrdir, &si, &pi);
 	if (!kk)
 	{
@@ -566,13 +581,7 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 
 		strd = wp;
 		str += _T("C|") + strd;
-		//str += _T("C|") + wp;
 		
-		if (strd.Find(_T("1467359740360")) != -1) {
-			str += _T(" 1467359740360");
-		}
-
-
 		if (strd.Find(_T("detect finished")) != -1) {
 			if (pthis->autoFlg) {
 				pthis->OnBnClickedDetectedFile();// detectetd file
@@ -605,8 +614,6 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15).GetBuffer());
 			cstrProgress.Replace(pthis->mEditFolderName, _T("\x7e"));
 			AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(cstrProgress);
-			//AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC)->SetWindowText(strd);
-
 		}
 		AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SetWindowText(str);
 		AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SendMessage(WM_VSCROLL, SB_BOTTOM, 0);
@@ -767,7 +774,7 @@ void CMFCApplication1Dlg::OnBnClickedChooseFolder()
 	if (dlg.DoModal() == IDOK)
 	{
 		mEditFolderName = pathSelected;
-		mEditFolderName.Replace(_T("\\"), _T("/"));
+		//mEditFolderName.Replace(_T("\\"), _T("/"));
 		cfgRead(pszFileName);
 		CFGStr[0] = mEditFolderName;
 		cfgWrite(pszFileName, CFGStr);
@@ -819,10 +826,18 @@ int CMFCApplication1Dlg::cfgWrite(CString fstr, CString *wstr)
 		TRACE(_T("File could not be  created %d\n"), e.m_cause);
 		return 0;
 	}
+	char cp[MAX_PATH*2+2+1];
 	for (int i = 0; i < 5; i++) {
 
-		USES_CONVERSION;
-		char* cp = T2A(wstr[i]+_T("\r\n"));
+		///USES_CONVERSION;
+		///char* cp = T2A(wstr[i]+_T("\r\n"));
+		
+		
+		ST2A(wstr[i] + _T("\r\n"), cp, sizeof(cp));
+
+		///int unicodefilelen = WideCharToMultiByte(CP_ACP, 0, (wstr[i] + _T("\r\n")), (wstr[i] + _T("\r\n")).GetLength(), NULL, 0,NULL,NULL);//把ansi文件长度转为Unicode文件长度
+		///WideCharToMultiByte(CP_ACP, 0, (wstr[i] + _T("\r\n")), (wstr[i] + _T("\r\n")).GetLength(), cp, (int)unicodefilelen,NULL,NULL);//把读到的文件转成宽字符
+		///cp[unicodefilelen] = '\0';
 
 		f.Write(cp, (UINT)strlen(cp));
 	}
@@ -843,8 +858,10 @@ int CMFCApplication1Dlg::cfgDefault(CString fstr)
 		CString dstr = { _T("") };
 		dstr = getWorkDir() + _T("\r\n") + _T("2\r\n") + _T("3\r\n") + _T("4\r\n") + _T("5");
 
-		USES_CONVERSION;
-		char* cp = T2A(dstr);
+		//USES_CONVERSION;
+		//char* cp = T2A(dstr);
+		char cp[MAX_PATH * 2 + 2 + 1];
+		ST2A(dstr, cp, sizeof(cp));
 
 		f.Write(cp, (UINT)strlen(cp));
 	}
@@ -872,175 +889,6 @@ void CMFCApplication1Dlg::OnBnClickedDetectedFile()// detected file
 }
 
 
-int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
-{
-	CStdioFile fs;// chang list file write
-	CFile fw;// chang list file write
-	CStringArray cstrArdbuf;
-	CFileException e;
-	int rdlen = 0;
-
-	char rdbuf[512];
-	char trdbuf[512];
-
-
-	char* old_locale = _strdup(setlocale(LC_CTYPE, NULL));
-	setlocale(LC_CTYPE, "chs");
-
-	if (!fs.Open(cstrChFileList,CFile::modeRead, &e)) {// open changelist file
-		TRACE(_T("open change list file  failed\r\n"));
-		return 0;
-	}
-	else {
-		CString rstr;
-
-
-		if (fs.GetLength() < 11) {
-			TRACE(_T("file not long enough to do file change\r\n"));
-			fs.Close();
-			return 0;
-		}
-
-		if (!fw.Open(cstrChangeFile, CFile::modeCreate |CFile::modeNoTruncate | CFile::modeReadWrite, &e)) {// creat a empty file to write,"IListfile.txt"
-			TRACE(_T("open changlist file failed\r\n"));
-			return 0;
-		}
-		//fw.SeekToEnd();
-
-		CString rcstr;
-		
-		SYSTEMTIME st;
-		CString strDate, strTime;
-		GetLocalTime(&st);
-		rcstr.Format(_T("%s m:%04d-%02d-%02d %02d:%02d:%02d c:%04d-%02d-%02d %02d:%02d:%02d\r\n")
-			, cstrChangestart.GetBuffer(), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond
-			, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-
-
-		CString fstr, rfstr;
-
-		while (1) {
-			if (fs.ReadString(rstr)) {
-				fstr = "";
-				rfstr = "";
-
-				CStringArray strResult;
-
-				CString strGap = _T("\x09");
-				int nPos = rstr.Find(strGap);
-
-				CString strLeft = _T("");
-				int cnt = 0;
-				while (0 <= nPos)
-				{
-					strLeft = rstr.Left(nPos);
-					if (!strLeft.IsEmpty())
-						strResult.Add(strLeft);
-					rstr = rstr.Right(rstr.GetLength() - nPos - 1);
-					nPos = rstr.Find(strGap);
-					if (nPos == -1) {
-						strResult.Add(rstr);
-						break;
-					}
-				}
-
-				cnt = (int)strResult.GetSize();
-				if (cnt==2) {// got gap "\x09"
-					fstr = strResult.GetAt(0);
-					rfstr = strResult.GetAt(1);
-					if (rfstr != fstr) {
-
-						BOOL FLAG = PathFileExists(fstr);
-						if (!FLAG)
-						{
-							//AfxMessageBox(L"不存在该文件:"+fstr);							
-						}
-						else {
-							CFile::Rename(fstr, rfstr);// there is no return value to know wether fail or success
-							USES_CONVERSION;
-							char *cp = T2A(rcstr + fstr + _T("\x09") + rfstr + _T("\r\n"));
-							// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
-							
-							if (strlen(cp) < 512) {
-								memset(rdbuf, 0, sizeof(rdbuf));
-								rdlen = (UINT)strlen(cp);
-								//rdlen = 0;
-								rdlen = fw.Read(rdbuf, rdlen);
-								rdlen = (UINT)strlen(rdbuf);
-								if (rdlen > 0) {
-									cstrArdbuf.Add(A2T(rdbuf));
-									fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-								}
-							}
-							fw.Write(cp, (UINT)strlen(cp));
-							rcstr = "";
-						}
-					}
-				}
-				else { // not detected
-				}
-			}
-			else {
-				break;
-			}
-		}
-		
-
-		if (rcstr.GetAllocLength() == 0) {
-			USES_CONVERSION;
-			char *cp = T2A(cstrChangeend + _T("\r\n"));
-			if (strlen(cp) < 512) {
-				memset(rdbuf, 0, sizeof(rdbuf));
-				rdlen = 0;
-				rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
-				if (rdlen > 0) {
-					cstrArdbuf.Add(A2T(rdbuf));
-					fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-				}
-			}
-			fw.Write(cp, (UINT)strlen(cp));
-		}
-
-		if (cstrArdbuf.GetSize()) {
-			// loop read and write
-			for (int i = 0; i < cstrArdbuf.GetSize(); i++) {
-				fstr = cstrArdbuf.GetAt(i);
-				USES_CONVERSION;
-				char *cp = T2A(fstr);
-				// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
-				
-				if (strlen(cp) < 512) {
-					memset(rdbuf, 0, sizeof(rdbuf));
-					rdlen = 0;
-					rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
-					if (rdlen > 0) {//Return Value ,The number of bytes transferred to the buffer.
-						cstrArdbuf.Add(A2T(rdbuf));
-						fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-					}
-				}
-				fw.Write(cp, (UINT)strlen(cp));
-				memcpy(trdbuf, rdbuf, sizeof(rdbuf));
-				//fflush(fw.h);
-			}
-		}
-
-		fw.Close();
-	}
-	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //还原语言区域的设置 
-	free(old_locale);//还原区域设定	
-
-	/*
-	if (fdelete) {
-		BOOL FLAG = PathFileExists(cstrChFileList);
-		if (FLAG)
-			CFile::Remove(cstrChFileList);
-	}
-	*/
-
-	return 0;
-}
-
 int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 {
 	CStdioFile fs;// chang list file write
@@ -1048,10 +896,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 	CStringArray cstrArdbuf;
 	CFileException e;
 	int rdlen = 0;
-
-
-
-
+	char cp[MAX_PATH * 2 + 2 + 1];
 
 	char* old_locale = _strdup(setlocale(LC_CTYPE, NULL));
 	setlocale(LC_CTYPE, "chs");
@@ -1083,9 +928,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 		if (!fw.Open(cstrChangeFile, CFile::modeCreate | CFile::modeReadWrite, &e)) {// creat a empty file to write,"IListfile.txt"
 			TRACE(_T("open changlist file failed\r\n"));
 			return 0;
-		}
-
-		
+		}		
 
 		CString rcstr;
 
@@ -1139,25 +982,15 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 						}
 						else {
 							CFile::Rename(fstr, rfstr);// there is no return value to know wether fail or success
-							//USES_CONVERSION;
-							char *cp = T2A(rcstr + fstr + _T("\x09") + rfstr + _T("\r\n"));
+							///USES_CONVERSION;
+							///char *cp = T2A(rcstr + fstr + _T("\x09") + rfstr + _T("\r\n"));
+							wlen = ST2A(rcstr + fstr + _T("\x09") + rfstr + _T("\r\n"),cp,sizeof(cp));
+
 							CString ts = (rcstr + fstr + _T("\x09") + rfstr + _T("\r\n"));
 							wlen = ts.GetLength();
 							wlen =  CStringA(rcstr + fstr + (CString)_T("\x09") + rfstr + (CString)_T("\r\n")).GetLength();
-							// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
-							/*
-							if (strlen(cp) < 512) {
-								memset(rdbuf, 0, sizeof(rdbuf));
-								rdlen = (UINT)strlen(cp);
-								//rdlen = 0;
-								rdlen = fw.Read(rdbuf, rdlen);
-								rdlen = (UINT)strlen(rdbuf);
-								if (rdlen > 0) {
-									cstrArdbuf.Add(A2T(rdbuf));
-									fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-								}
-							}*/
-							//fw.Write(cp, (UINT)strlen(cp));
+
+														
 							fw.Write(cp, wlen);
 							rcstr = "";
 						}
@@ -1174,59 +1007,19 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 
 		if (rcstr.GetAllocLength() == 0) {
 			//USES_CONVERSION;
-			char *cp = T2A(cstrChangeend + _T("\r\n"));
+			///char *cp = T2A(cstrChangeend + _T("\r\n"));
+			wlen =  ST2A(cstrChangeend + _T("\r\n"),cp,sizeof(cp));
 			wlen = CStringA(cstrChangeend + _T("\r\n")).GetLength();
-			/*
-			if (strlen(cp) < 512) {
-				memset(rdbuf, 0, sizeof(rdbuf));
-				rdlen = 0;
-				rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
-				if (rdlen > 0) {
-					cstrArdbuf.Add(A2T(rdbuf));
-					fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-				}
-			}*/
-			//fw.Write(cp, (UINT)strlen(cp));
 			fw.Write(cp, wlen);
 		}
-		/*
-		if (cstrArdbuf.GetSize()) {
-			// loop read and write
-			for (int i = 0; i < cstrArdbuf.GetSize(); i++) {
-				fstr = cstrArdbuf.GetAt(i);
-				USES_CONVERSION;
-				char *cp = T2A(fstr);
-				// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
 
-				if (strlen(cp) < 512) {
-					memset(rdbuf, 0, sizeof(rdbuf));
-					rdlen = 0;
-					rdlen = fw.Read(rdbuf, (UINT)strlen(cp));
-					if (rdlen > 0) {//Return Value ,The number of bytes transferred to the buffer.
-						cstrArdbuf.Add(A2T(rdbuf));
-						fw.Seek(fw.GetPosition() - rdlen, CFile::begin);
-					}
-				}
-				fw.Write(cp, (UINT)strlen(cp));
-				memcpy(trdbuf, rdbuf, sizeof(rdbuf));
-				//fflush(fw.h);
-			}
-		}*/
 		fw.Write(p, (UINT)strlen(p));
 		fw.Close();
+		delete[] p;
 	}
-	fs.Close();
+	fs.Close();	
 	setlocale(LC_CTYPE, old_locale); //还原语言区域的设置 
 	free(old_locale);//还原区域设定	
-
-					 /*
-					 if (fdelete) {
-					 BOOL FLAG = PathFileExists(cstrChFileList);
-					 if (FLAG)
-					 CFile::Remove(cstrChFileList);
-					 }
-					 */
-
 	return 0;
 }
 
@@ -1321,10 +1114,15 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 		strDate.Format(_T("%s m:%04d-%02d-%02d %02d:%02d:%02d")
 			, cstrChangeUndo.GetBuffer(), st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
 
-		USES_CONVERSION;
-		char *cp = T2A(strDate);
+		///USES_CONVERSION;
+		//char *cp = T2A(strDate);
+		char cp[MAX_PATH * 2 + 2 + 1];
+		int wlen;
+		wlen = ST2A(strDate,cp,sizeof(cp));
+
 		// read the same size of writing data to a buf,and after finish new writeing ,then write the buf data to file
-		fs.Write(cp, (UINT)strlen(cp));
+		///fs.Write(cp, (UINT)strlen(cp));
+		fs.Write(cp, wlen);
 	}
 	fs.Close();
 	setlocale(LC_CTYPE, old_locale); //还原语言区域的设置 
@@ -1450,6 +1248,8 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 			TRACE(_T("open cfw failed\r\n"));
 			return;
 		}
+		char cp[MAX_PATH * 2 + 2 + 1];
+		int wlen;
 
 		while (1) {
 			if (fs.ReadString(rstr)) {
@@ -1512,16 +1312,20 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 					}
 					rfstr += suffix;
 					if (rfstr != fstr) {
-						USES_CONVERSION;
-						char* cp = T2A(rfstr + _T("\r\n"));
+						///USES_CONVERSION;
+						///char* cp = T2A(rfstr + _T("\r\n"));
+						wlen = ST2A(rfstr + _T("\r\n"),cp,sizeof(cp));
+
 
 						if (rfstr.Find(_T("_person")) > 0) {
 							if (cstrListout != "") {
 								fw.Write(cp, (UINT)strlen(cp));
 							}
 						}
-						cp = T2A(fstr + _T("\x09") + rfstr + _T("\r\n"));
-						cfw.Write(cp, (UINT)strlen(cp));
+						///cp = T2A(fstr + _T("\x09") + rfstr + _T("\r\n"));
+						wlen = ST2A(fstr + _T("\x09") + rfstr + _T("\r\n"),cp,sizeof(cp));
+						///cfw.Write(cp, (UINT)strlen(cp));
+						cfw.Write(cp, wlen);
 						//CFile::Rename(strResult.GetAt(0), rfstr);
 					}
 					else {
@@ -1592,12 +1396,6 @@ int CMFCApplication1Dlg::cuntFiles(CString cstrFile)
 }
 
 
-char * CMFCApplication1Dlg::myT2A(CString cstrT2A)
-{
-	return nullptr;
-}
-
-
 void CMFCApplication1Dlg::OnBnClickedButton12()
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -1658,4 +1456,17 @@ void CMFCApplication1Dlg::dopreexit()
 	ColseChildProcess();
 	TerminateThread(m_hThread, 0);
 
+}
+
+
+int CMFCApplication1Dlg::ST2A(CString cstrSrc,char *cp,int maxlen)// &cp use the origin cp from calling.
+{
+	memset(cp, 0, maxlen);
+	int wlen = WideCharToMultiByte(CP_ACP, 0, cstrSrc, cstrSrc.GetLength(), NULL, 0, NULL, NULL);//把ansi文件长度转为Unicode文件长度
+	if (wlen > maxlen) {
+		wlen = maxlen-1;
+	}
+	WideCharToMultiByte(CP_ACP, 0, cstrSrc, cstrSrc.GetLength(), cp, wlen, NULL, NULL);//把读到的文件转成宽字符
+	///cp[wlen] = '\0';
+	return(wlen);
 }
