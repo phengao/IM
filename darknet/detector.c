@@ -1364,7 +1364,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *listnam
 			const int best_class = selected_detections[i].best_class;
 			printf("%s: %.0f%%\n", names[best_class], selected_detections[i].det.prob[best_class] * 100);
 			fflush(stdout);
-			if (selected_detections[i].det.prob[best_class] > 0.7) {
+			if (selected_detections[i].det.prob[best_class] > 0.6) {// threshold
 				fprintf(fpw, "\x09%s-%f4", names[best_class], selected_detections[i].det.prob[best_class]);
 			}
 		}

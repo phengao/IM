@@ -87,7 +87,7 @@ public:
 	CString getWorkDir();
 	#define M_MAXCNT 5;
 	CString CFGStr[5];
-	CString pszFileName = _T("cfg.txt");
+	CString pszFileName = { _T("cfg.txt") };
 
 	//CString cstrListFile = _T("D:/imageManage/seetaface/src/Filelist.txt");// keep all files in the setting floder
 	CString cstrListFile = _T("Filelist.txt");// keep all files in the setting floder
@@ -134,7 +134,7 @@ public:
 	clock_t clockCurrent;
 
 	char * CMFCApplication1Dlg::myT2A(CString cstrT2A);
-
+	int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList, int fdelete);
 	afx_msg void OnBnClickedButton12();
 	int CMFCApplication1Dlg::getpid(CString pname);
 	void CMFCApplication1Dlg::closepid(int pid);
@@ -143,7 +143,6 @@ public:
 	char m_threadrun = 1;
 	HANDLE m_hThread;
 	void dopreexit();
-	int ST2A(CString cstrSrc, char *cp, int maxlen);
 	CString cstrWorkDir;
 };
 

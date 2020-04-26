@@ -257,7 +257,7 @@ int identify_pic() {
 					///std::cout << "right_person:" << GalleryIndexMap[index] << std::endl;
 					cv::putText(frame, GalleryIndexMap[index], cv::Point(face.pos.x, face.pos.y - 5), 3, 1, CV_RGB(255, 128, 128));
 					
-					string::size_type iPos = GalleryIndexMap[index].find_last_of('\\') + 1;
+					string::size_type iPos = GalleryIndexMap[index].find_last_of('/') + 1;
 					string tmp = GalleryIndexMap[index].substr(iPos, GalleryIndexMap[index].length() - iPos);
 
 					tmp = tmp.substr(0, tmp.rfind("."));
@@ -277,7 +277,7 @@ int identify_pic() {
 			ofs.write(strrus.c_str(), strlen(strrus.c_str()));
 
 
-			char showflg = 1;
+			char showflg = 0;
 
 			if (showflg) {
 				cv::namedWindow("Compare_Result", 0);
