@@ -144,5 +144,6 @@ public:
 	HANDLE m_hThread;
 	void dopreexit();
 	CString cstrWorkDir;
+	afx_msg void OnBnClickedButton11();
 };
 

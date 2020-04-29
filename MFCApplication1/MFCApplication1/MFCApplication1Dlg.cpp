@@ -1,5 +1,5 @@
-
-// MFCApplication1Dlg.cpp : ÊµÏÖÎÄ¼ş
+ï»¿
+// MFCApplication1Dlg.cpp : å®ç°æ–‡ä»¶
 //
 
 #include "stdafx.h"
@@ -25,10 +25,18 @@
 #include<Windows.h>
 #include<TlHelp32.h>
 
+#include<afxsock.h>
 
 #include "stdafx.h"
 #include <Windows.h>
 #include "folder_dialog.h"
+#include "stdafx.h"
+
+#include "winsock.h"
+#include "stdio.h"
+#include <IPHlpApi.h>
+#pragma comment(lib,"Iphlpapi.lib")
+
 
 using namespace std;
 //using namespace BaseFunc;
@@ -37,28 +45,29 @@ using namespace std;
 #pragma comment(lib, "cryptlib.lib")
 using namespace CryptoPP;
 
+#pragma warning(disable:4996)
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-// ÓÃÓÚÓ¦ÓÃ³ÌĞò¡°¹ØÓÚ¡±²Ëµ¥ÏîµÄ CAboutDlg ¶Ô»°¿ò
+// ç”¨äºåº”ç”¨ç¨‹åºâ€œå…³äºâ€èœå•é¡¹çš„ CAboutDlg å¯¹è¯æ¡†
 
 class CAboutDlg : public CDialogEx
 {
 public:
 	CAboutDlg();
 
-// ¶Ô»°¿òÊı¾İ
+// å¯¹è¯æ¡†æ•°æ®
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
 	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV Ö§³Ö
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV æ”¯æŒ
 
-// ÊµÏÖ
+// å®ç°
 protected:
 	DECLARE_MESSAGE_MAP()
 };
@@ -76,7 +85,7 @@ BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CMFCApplication1Dlg ¶Ô»°¿ò
+// CMFCApplication1Dlg å¯¹è¯æ¡†
 CMFCApplication1Dlg::CMFCApplication1Dlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(IDD_MFCAPPLICATION1_DIALOG, pParent)
 	, mEdit1(_T(""))
@@ -160,18 +169,19 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON9, &CMFCApplication1Dlg::OnBnClickedButton9)
 	ON_BN_CLICKED(IDC_BUTTON10, &CMFCApplication1Dlg::OnBnClickedButton10)
 	ON_BN_CLICKED(IDC_BUTTON12, &CMFCApplication1Dlg::OnBnClickedButton12)
+	ON_BN_CLICKED(IDC_BUTTON11, &CMFCApplication1Dlg::OnBnClickedButton11)
 END_MESSAGE_MAP()
 
 
-// CMFCApplication1Dlg ÏûÏ¢´¦Àí³ÌĞò
+// CMFCApplication1Dlg æ¶ˆæ¯å¤„ç†ç¨‹åº
 
 BOOL CMFCApplication1Dlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
-	// ½«¡°¹ØÓÚ...¡±²Ëµ¥ÏîÌí¼Óµ½ÏµÍ³²Ëµ¥ÖĞ¡£
+	// å°†â€œå…³äº...â€èœå•é¡¹æ·»åŠ åˆ°ç³»ç»Ÿèœå•ä¸­ã€‚
 
-	// IDM_ABOUTBOX ±ØĞëÔÚÏµÍ³ÃüÁî·¶Î§ÄÚ¡£
+	// IDM_ABOUTBOX å¿…é¡»åœ¨ç³»ç»Ÿå‘½ä»¤èŒƒå›´å†…ã€‚
 	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
 	ASSERT(IDM_ABOUTBOX < 0xF000);
 
@@ -189,16 +199,16 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 		}
 	}
 
-	// ÉèÖÃ´Ë¶Ô»°¿òµÄÍ¼±ê¡£  µ±Ó¦ÓÃ³ÌĞòÖ÷´°¿Ú²»ÊÇ¶Ô»°¿òÊ±£¬¿ò¼Ü½«×Ô¶¯
-	//  Ö´ĞĞ´Ë²Ù×÷
-	SetIcon(m_hIcon, TRUE);			// ÉèÖÃ´óÍ¼±ê
-	SetIcon(m_hIcon, FALSE);		// ÉèÖÃĞ¡Í¼±ê
+	// è®¾ç½®æ­¤å¯¹è¯æ¡†çš„å›¾æ ‡ã€‚  å½“åº”ç”¨ç¨‹åºä¸»çª—å£ä¸æ˜¯å¯¹è¯æ¡†æ—¶ï¼Œæ¡†æ¶å°†è‡ªåŠ¨
+	//  æ‰§è¡Œæ­¤æ“ä½œ
+	SetIcon(m_hIcon, TRUE);			// è®¾ç½®å¤§å›¾æ ‡
+	SetIcon(m_hIcon, FALSE);		// è®¾ç½®å°å›¾æ ‡
 
-	// TODO: ÔÚ´ËÌí¼Ó¶îÍâµÄ³õÊ¼»¯´úÂë
-	// ³õÊ¼»¯¸¸½ø³Ì pipe
+	// TODO: åœ¨æ­¤æ·»åŠ é¢å¤–çš„åˆå§‹åŒ–ä»£ç 
+	// åˆå§‹åŒ–çˆ¶è¿›ç¨‹ pipe
 	my_PipeInit();
 
-	return TRUE;  // ³ı·Ç½«½¹µãÉèÖÃµ½¿Ø¼ş£¬·ñÔò·µ»Ø TRUE
+	return TRUE;  // é™¤éå°†ç„¦ç‚¹è®¾ç½®åˆ°æ§ä»¶ï¼Œå¦åˆ™è¿”å› TRUE
 }
 
 void CMFCApplication1Dlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -218,11 +228,11 @@ void CMFCApplication1Dlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // ÓÃÓÚ»æÖÆµÄÉè±¸ÉÏÏÂÎÄ
+		CPaintDC dc(this); // ç”¨äºç»˜åˆ¶çš„è®¾å¤‡ä¸Šä¸‹æ–‡
 
 		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
 
-		// Ê¹Í¼±êÔÚ¹¤×÷Çø¾ØĞÎÖĞ¾ÓÖĞ
+		// ä½¿å›¾æ ‡åœ¨å·¥ä½œåŒºçŸ©å½¢ä¸­å±…ä¸­
 		int cxIcon = GetSystemMetrics(SM_CXICON);
 		int cyIcon = GetSystemMetrics(SM_CYICON);
 		CRect rect;
@@ -230,7 +240,7 @@ void CMFCApplication1Dlg::OnPaint()
 		int x = (rect.Width() - cxIcon + 1) / 2;
 		int y = (rect.Height() - cyIcon + 1) / 2;
 
-		// »æÖÆÍ¼±ê
+		// ç»˜åˆ¶å›¾æ ‡
 		dc.DrawIcon(x, y, m_hIcon);
 	}
 	else
@@ -239,8 +249,8 @@ void CMFCApplication1Dlg::OnPaint()
 	}
 }
 
-//µ±ÓÃ»§ÍÏ¶¯×îĞ¡»¯´°¿ÚÊ±ÏµÍ³µ÷ÓÃ´Ëº¯ÊıÈ¡µÃ¹â±ê
-//ÏÔÊ¾¡£
+//å½“ç”¨æˆ·æ‹–åŠ¨æœ€å°åŒ–çª—å£æ—¶ç³»ç»Ÿè°ƒç”¨æ­¤å‡½æ•°å–å¾—å…‰æ ‡
+//æ˜¾ç¤ºã€‚
 HCURSOR CMFCApplication1Dlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
@@ -250,8 +260,8 @@ HCURSOR CMFCApplication1Dlg::OnQueryDragIcon()
 
 void CMFCApplication1Dlg::OnBnClickedButton1()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
-	// ÎÄ¼şµ±Ç°Ä¿Â¼
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
+	// æ–‡ä»¶å½“å‰ç›®å½•
 	TCHAR Buffer[MAX_PATH];
 	DWORD dwRet = GetCurrentDirectory(MAX_PATH, Buffer);
 	CString strCurrent(Buffer);
@@ -259,7 +269,7 @@ void CMFCApplication1Dlg::OnBnClickedButton1()
 
 	CString mstr;
 
-	//»ñÈ¡ÏµÍ³Ê±¼ä
+	//è·å–ç³»ç»Ÿæ—¶é—´
 	CTime tm;
 	m_button1.EnableWindow(false);
 
@@ -278,7 +288,7 @@ void CMFCApplication1Dlg::OnBnClickedButton1()
 	}
 
 	if (strdir == _T("")) {
-		MessageBox(_T("ÉèÖÃÎÄ¼ş¼ĞÏÈ"), NULL, MB_OK);
+		MessageBox(_T("è®¾ç½®æ–‡ä»¶å¤¹å…ˆ"), NULL, MB_OK);
 		m_button1.EnableWindow(true);
 		return;
 	}
@@ -297,39 +307,39 @@ void CMFCApplication1Dlg::OnBnClickedButton1()
 unsigned long ulcont = 0;
 void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 {
-	CFileFind filefind;                                         //ÉùÃ÷CFileFindÀàĞÍ±äÁ¿
+	CFileFind filefind;                                         //å£°æ˜CFileFindç±»å‹å˜é‡
 	CFile file;
 	Weak::MD5 hash;
-	CString strWildpath = strDir + _T("/*.*");     //ËùÓĞjpgÎÄ¼ş¶¼ÁĞ³ö¡£
+	CString strWildpath = strDir + _T("/*.*");     //æ‰€æœ‰jpgæ–‡ä»¶éƒ½åˆ—å‡ºã€‚
 
-	if (filefind.FindFile(strWildpath, 0))                    //¿ªÊ¼¼ìË÷ÎÄ¼ş
+	if (filefind.FindFile(strWildpath, 0))                    //å¼€å§‹æ£€ç´¢æ–‡ä»¶
 	{
 		BOOL bRet = TRUE;
 
 		while (bRet)
 		{
-			bRet = filefind.FindNextFile();                 //Ã¶¾ÙÒ»¸öÎÄ¼ş            
+			bRet = filefind.FindNextFile();                 //æšä¸¾ä¸€ä¸ªæ–‡ä»¶            
 
-			if (filefind.IsDots())                                 //Èç¹ûÊÇ. »ò .. ×öÏÂÒ»¸ö
+			if (filefind.IsDots())                                 //å¦‚æœæ˜¯. æˆ– .. åšä¸‹ä¸€ä¸ª
 			{
 				continue;
 			}
 
-			// ÎÄ¼şÃû begin
+			// æ–‡ä»¶å begin
 			CString strFileName = filefind.GetFileName();
 			CString strLastName = strFileName.Right(strFileName.GetLength() - strFileName.ReverseFind('.') - 1);
-			// ÎÄ¼şÃû end
+			// æ–‡ä»¶å end
 
-			// ÎÄ¼şĞŞ¸ÄÊ±¼ä begin
+			// æ–‡ä»¶ä¿®æ”¹æ—¶é—´ begin
 			FILETIME   filetime;
 			FILETIME   localtime;
 			SYSTEMTIME systemtime;
 			
 			filefind.GetLastWriteTime(&filetime);
 
-			FileTimeToLocalFileTime(&filetime, &localtime); //»»³É±¾µØÊ±¼ä
+			FileTimeToLocalFileTime(&filetime, &localtime); //æ¢æˆæœ¬åœ°æ—¶é—´
 
-			FileTimeToSystemTime(&localtime, &systemtime);  //»»³ÉÏµÍ³Ê±¼ä¸ñÊ½
+			FileTimeToSystemTime(&localtime, &systemtime);  //æ¢æˆç³»ç»Ÿæ—¶é—´æ ¼å¼
 
 			CString strTime = _T("");
 			strTime.Format(_T("%04d%02d%02d%02d%02d%02d"),
@@ -345,8 +355,8 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 			//strwrite = strFileName + _T("\x09") + strDir + _T("\x09") + strlen + _T("\x09");
 			strwrite = strDir + _T("\\") + strFileName;
 
-			// ÎÄ¼şĞŞ¸ÄÊ±¼ä end            
-			if (!filefind.IsDirectory())                          //²»ÊÇ×ÓÄ¿Â¼£¬°ÑÎÄ¼şÃû´òÓ¡³öÀ´
+			// æ–‡ä»¶ä¿®æ”¹æ—¶é—´ end            
+			if (!filefind.IsDirectory())                          //ä¸æ˜¯å­ç›®å½•ï¼ŒæŠŠæ–‡ä»¶åæ‰“å°å‡ºæ¥
 			{
 				//filter: jpg only;
 				CString strLastName = strFileName.Right(strFileName.GetLength() - strFileName.ReverseFind('.') - 1).MakeLower();
@@ -354,19 +364,19 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 					continue;
 				/*
 				int haslen = hash.DigestSize();
-				memset(buf, 0, sizeof(buf));//³õÊ¼»¯ÄÚ´æ£¬·ÀÖ¹¶Á³ö×Ö·ûÄ©Î²³öÏÖÂÒÂë
-				memset(digest, 0, sizeof(digest));//³õÊ¼»¯ÄÚ´æ£¬·ÀÖ¹¶Á³ö×Ö·ûÄ©Î²³öÏÖÂÒÂë
+				memset(buf, 0, sizeof(buf));//åˆå§‹åŒ–å†…å­˜ï¼Œé˜²æ­¢è¯»å‡ºå­—ç¬¦æœ«å°¾å‡ºç°ä¹±ç 
+				memset(digest, 0, sizeof(digest));//åˆå§‹åŒ–å†…å­˜ï¼Œé˜²æ­¢è¯»å‡ºå­—ç¬¦æœ«å°¾å‡ºç°ä¹±ç 
 				try
 				{
 					if (!file.Open(strFilePath, CFile::modeRead))
 					{
 						CString str; 
-						str.Format(_T("Ã»ÓĞÎÄ¼ş! %s\n"), strFilePath);
+						str.Format(_T("æ²¡æœ‰æ–‡ä»¶! %s\n"), strFilePath);
 						TRACE(str);
 						return;
 					}
 					
-					//½á¹¹Ìå¸ñÊ½¶ÁÈ¡
+					//ç»“æ„ä½“æ ¼å¼è¯»å–
 					int rdlen = 0;
 					while(1)
 					{
@@ -386,7 +396,7 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 				catch (CFileException *e)
 				{
 					CString str;
-					str.Format(_T("¶ÁÈ¡Êı¾İÊ§°ÜµÄÔ­ÒòÊÇ:%d ,%s"), e->m_cause, strFilePath);
+					str.Format(_T("è¯»å–æ•°æ®å¤±è´¥çš„åŸå› æ˜¯:%d ,%s"), e->m_cause, strFilePath);
 					TRACE("str");
 					file.Abort();
 					e->Delete();
@@ -407,12 +417,12 @@ void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 				fp->Write(cp, len);
 				
 			}
-			else                                                   //Èç¹ûÊÇ×ÓÄ¿Â¼£¬µİ¹éµ÷ÓÃ¸Ãº¯Êı
+			else                                                   //å¦‚æœæ˜¯å­ç›®å½•ï¼Œé€’å½’è°ƒç”¨è¯¥å‡½æ•°
 			{
 				CString strNewDir = strDir + CString(_T("/")) + filefind.GetFileName();
 				ldPathCnt++;
 
-				TravelFolder(strNewDir,fp);//µİ¹éµ÷ÓÃ¸Ãº¯Êı´òÓ¡×ÓÄ¿Â¼ÀïµÄÎÄ¼ş
+				TravelFolder(strNewDir,fp);//é€’å½’è°ƒç”¨è¯¥å‡½æ•°æ‰“å°å­ç›®å½•é‡Œçš„æ–‡ä»¶
 			}
 		}
 		filefind.Close();
@@ -438,9 +448,9 @@ void CMFCApplication1Dlg::my_PipeInit()
 	//CString exe_path = _T("D:/imageManage/MFCApplication1/x64/darknet_no_gpu.exe");
 	/*
 	if (!my_CreateProcess(cstrDarkexeName)) {
-		CloseHandle(m_hPipeWriteParentDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteParentDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadParentDetect);
-		CloseHandle(m_hPipeWriteChildDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteChildDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadChildDetect);
 		return;
 	}
@@ -452,13 +462,13 @@ void CMFCApplication1Dlg::my_PipeInit()
 	LPVOID *plp = (LPVOID *)&pRecvParam;
 	RECVPAR *lp = (RECVPAR *)plp;
 	m_threadrun = 1;
-	m_hThread = CreateThread(NULL, 0, Pipe_Listen, (LPVOID)&pRecvParam, 0, NULL);	//´´½¨socketµÄ·¢ËÍÏß³Ì
+	m_hThread = CreateThread(NULL, 0, Pipe_Listen, (LPVOID)&pRecvParam, 0, NULL);	//åˆ›å»ºsocketçš„å‘é€çº¿ç¨‹
 }
 
 void CMFCApplication1Dlg::SetSecurity_attr(SECURITY_ATTRIBUTES& ps)
 {
-	//ÕâÀï±ØĞë½« bInheritHandle ÉèÖÃÎª TRUE£¬
-	//´Ó¶øÊ¹µÃ×Ó½ø³Ì¿ÉÒÔ¼Ì³Ğ¸¸½ø³Ì´´½¨µÄÄäÃû¹ÜµÀµÄ¾ä±ú
+	//è¿™é‡Œå¿…é¡»å°† bInheritHandle è®¾ç½®ä¸º TRUEï¼Œ
+	//ä»è€Œä½¿å¾—å­è¿›ç¨‹å¯ä»¥ç»§æ‰¿çˆ¶è¿›ç¨‹åˆ›å»ºçš„åŒ¿åç®¡é“çš„å¥æŸ„
 	ps.bInheritHandle = TRUE;
 	ps.lpSecurityDescriptor = NULL;
 	ps.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -470,11 +480,11 @@ void CMFCApplication1Dlg::SetStartInfo(STARTUPINFO& si)
 	si.cb = sizeof(STARTUPINFO);
 	si.wShowWindow = SW_SHOW;
 	si.dwFlags = STARTF_USESTDHANDLES;//STARTF_USESHOWWINDOW|STARTF_USESTDHANDLES;
-									  //×Ó½ø³ÌµÄ±ê×¼ÊäÈë¾ä±úÎª¸¸½ø³Ì¹ÜµÀµÄ¶ÁÊı¾İ¾ä±ú
+									  //å­è¿›ç¨‹çš„æ ‡å‡†è¾“å…¥å¥æŸ„ä¸ºçˆ¶è¿›ç¨‹ç®¡é“çš„è¯»æ•°æ®å¥æŸ„
 	si.hStdInput = m_hPipeReadChildDetect;
-	//×Ó½ø³ÌµÄ±ê×¼Êä³ö¾ä±úÎª¸¸½ø³Ì¹ÜµÀµÄĞ´Êı¾İ¾ä±ú
+	//å­è¿›ç¨‹çš„æ ‡å‡†è¾“å‡ºå¥æŸ„ä¸ºçˆ¶è¿›ç¨‹ç®¡é“çš„å†™æ•°æ®å¥æŸ„
 	si.hStdOutput = m_hPipeWriteParentDetect;
-	//×Ó½ø³ÌµÄ±ê×¼´íÎó´¦Àí¾ä±úºÍ¸¸½ø³ÌµÄ±ê×¼´íÎó´¦Àí¾ä±úÒ»ÖÂ
+	//å­è¿›ç¨‹çš„æ ‡å‡†é”™è¯¯å¤„ç†å¥æŸ„å’Œçˆ¶è¿›ç¨‹çš„æ ‡å‡†é”™è¯¯å¤„ç†å¥æŸ„ä¸€è‡´
 	si.hStdError = HANDLE(STD_ERROR_HANDLE);
 }
 
@@ -503,7 +513,7 @@ void CMFCApplication1Dlg::my_SendDataPipe(CString data)
 	USES_CONVERSION;
 	char* cp = T2A(data);
 
-	//Ğ´ÈëÊı¾İ
+	//å†™å…¥æ•°æ®
 	if (!pipeflg) return;
 	if (!WriteFile(m_hPipeWriteChildDetect, (LPCTSTR)cp, (UINT)strlen(cp), &data_write, NULL))
 	{
@@ -537,7 +547,7 @@ bool CMFCApplication1Dlg::my_CreateProcess(CString epath)
 		MessageBox(_T("create process failed: \r\n") + epath );
 		return false;
 	}
-	//ÓÉÓÚ½á¹¹ÌåpiÖĞµÄÊı¾İÒÑ¾­Ê¹ÓÃ²»µ½ÁË£¬½«Æä×ÊÔ´ÊÍ·Å
+	//ç”±äºç»“æ„ä½“piä¸­çš„æ•°æ®å·²ç»ä½¿ç”¨ä¸åˆ°äº†ï¼Œå°†å…¶èµ„æºé‡Šæ”¾
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 	proFlg = 1;
@@ -571,8 +581,8 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 		//USES_CONVERSION;
 		//CString strd = A2T(data);
 		memset(wca, 0, sizeof(wca));
-		int unicodefilelen = MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), NULL, 0);//°ÑansiÎÄ¼ş³¤¶È×ªÎªUnicodeÎÄ¼ş³¤¶È
-		MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), wp, (int)unicodefilelen);//°Ñ¶Áµ½µÄÎÄ¼ş×ª³É¿í×Ö·û
+		int unicodefilelen = MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), NULL, 0);//æŠŠansiæ–‡ä»¶é•¿åº¦è½¬ä¸ºUnicodeæ–‡ä»¶é•¿åº¦
+		MultiByteToWideChar(CP_ACP, 0, data, (UINT)strlen(data), wp, (int)unicodefilelen);//æŠŠè¯»åˆ°çš„æ–‡ä»¶è½¬æˆå®½å­—ç¬¦
 		wp[unicodefilelen] = '\0';
 
 		strd = wp;
@@ -611,7 +621,7 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 
 			long needTime = (pthis->clockCurrent - pthis->clockStart) * (pthis->fileCount - pthis->fileGrow) / pthis->fileGrow / CLOCKS_PER_SEC;
 
-			cstrProgress.Format(_T("%s  %d/%d ¡¾%02d:%02d:%02d¡¿ %s")
+			cstrProgress.Format(_T("%s  %d/%d ã€%02d:%02d:%02dã€‘ %s")
 								, pthis->cstrStatichead.GetBuffer(), pthis->fileGrow, pthis->fileCount
 								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15).GetBuffer());
 			cstrProgress.Replace(pthis->mEditFolderName, _T("\x7e"));
@@ -630,9 +640,9 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 
 void CMFCApplication1Dlg::OnBnClickedButtonIdentify()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	CString str;
-	cstrStatichead = _T(" Ãæ²¿Ê¶±ğ: ");
+	cstrStatichead = _T(" é¢éƒ¨è¯†åˆ«: ");
 
 	fileCount = cuntFiles(cstrIListFile);
 	fileGrow = 0;
@@ -654,9 +664,9 @@ void CMFCApplication1Dlg::OnBnClickedButtonIdentify()
 
 void CMFCApplication1Dlg::OnBnClickedButtonDetect()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	CString str;
-	cstrStatichead = _T("Ä¿±ê¼ì²â: ");
+	cstrStatichead = _T("ç›®æ ‡æ£€æµ‹: ");
 
 	fileCount = cuntFiles(cstrListFile);
 	fileGrow = 0;
@@ -679,7 +689,7 @@ void CMFCApplication1Dlg::OnBnClickedButtonDetect()
 
 void CMFCApplication1Dlg::OnBnClickedButtonStop()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	CString str;
 	str = "QUIT";
 	my_SendDataPipe(str);
@@ -691,7 +701,7 @@ void CMFCApplication1Dlg::OnBnClickedButtonStop()
 
 void CMFCApplication1Dlg::OnBnClickedButtonIdentifyDefaul()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	CString str;
 	str = "test";
 	my_SendDataPipe(str);
@@ -702,7 +712,7 @@ void CMFCApplication1Dlg::OnBnClickedButtonIdentifyDefaul()
 
 void CMFCApplication1Dlg::OnClose()
 {
-	// TODO: ÔÚ´ËÌí¼ÓÏûÏ¢´¦Àí³ÌĞò´úÂëºÍ/»òµ÷ÓÃÄ¬ÈÏÖµ
+	// TODO: åœ¨æ­¤æ·»åŠ æ¶ˆæ¯å¤„ç†ç¨‹åºä»£ç å’Œ/æˆ–è°ƒç”¨é»˜è®¤å€¼
 	//ColseChildProcess();	
 	dopreexit();
 	CDialogEx::OnClose();
@@ -711,7 +721,7 @@ void CMFCApplication1Dlg::OnClose()
 
 void CMFCApplication1Dlg::OnBnClickedOk()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	//ColseChildProcess();	
 	dopreexit();
 	CDialogEx::OnOK();
@@ -720,7 +730,7 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 
 void CMFCApplication1Dlg::OnBnClickedCancel()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	//ColseChildProcess(); 
 	dopreexit();
 	CDialogEx::OnCancel();
@@ -742,15 +752,15 @@ int CMFCApplication1Dlg::ColseChildProcess()
 
 unsigned CMFCApplication1Dlg::selFile(CString &strFile, const CString &strExt, bool bOpen)
 {
-	CString strDir = _T("D:\\imageManage");//ÕâÀïÍ¨¹ıstrFile½âÎöÄ¿Â¼,CFileDialog»á×Ô¶¯¼Ç×¡
-	CString filename = _T("hi.txt");  //Í¨¹ıstrFile½âÎöÎÄ¼şÃû
-	CString filter = strExt + _T("ÎÄ¼ş (*.") + strExt + _T(")|*.") + strExt + _T("||");
+	CString strDir = _T("D:\\imageManage");//è¿™é‡Œé€šè¿‡strFileè§£æç›®å½•,CFileDialogä¼šè‡ªåŠ¨è®°ä½
+	CString filename = _T("hi.txt");  //é€šè¿‡strFileè§£ææ–‡ä»¶å
+	CString filter = strExt + _T("æ–‡ä»¶ (*.") + strExt + _T(")|*.") + strExt + _T("||");
 	CString ext = _T(".") + strExt;
 
 
 	CFileDialog dlg(((bool)bOpen, _T("*..*"), filename, OFN_READONLY | OFN_OVERWRITEPROMPT, filter, NULL));
 	
-	dlg.GetOFN().lpstrInitialDir = strFile;// Ä¬ÈÏÄ¿Â¼
+	dlg.GetOFN().lpstrInitialDir = strFile;// é»˜è®¤ç›®å½•
 
 	if (dlg.DoModal())
 	{
@@ -784,7 +794,7 @@ void CMFCApplication1Dlg::OnBnClickedChooseFolder()
 		cfgWrite(pszFileName, CFGStr);
 	}
 	else
-		AfxMessageBox(_T("ÎŞĞ§µÄÄ¿Â¼£¬ÇëÖØĞÂÑ¡Ôñ"));
+		AfxMessageBox(_T("æ— æ•ˆçš„ç›®å½•ï¼Œè¯·é‡æ–°é€‰æ‹©"));
 	UpdateData(false);
 }
 
@@ -813,8 +823,8 @@ int CMFCApplication1Dlg::cfgRead(CString fstr)
 		}
 	}
 	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //»¹Ô­ÓïÑÔÇøÓòµÄÉèÖÃ 
-	free(old_locale);//»¹Ô­ÇøÓòÉè¶¨
+	setlocale(LC_CTYPE, old_locale); //è¿˜åŸè¯­è¨€åŒºåŸŸçš„è®¾ç½® 
+	free(old_locale);//è¿˜åŸåŒºåŸŸè®¾å®š
 
 	return 1;
 }
@@ -964,7 +974,7 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 						BOOL FLAG = PathFileExists(fstr);
 						if (!FLAG)
 						{
-							//AfxMessageBox(L"²»´æÔÚ¸ÃÎÄ¼ş:"+fstr);							
+							//AfxMessageBox(L"ä¸å­˜åœ¨è¯¥æ–‡ä»¶:"+fstr);							
 						}
 						else {
 							CFile::Rename(fstr, rfstr);// there is no return value to know wether fail or success
@@ -1038,8 +1048,8 @@ int CMFCApplication1Dlg::DoChangeFileNamebak(CString cstrChFileList,int fdelete)
 		fw.Close();
 	}
 	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //»¹Ô­ÓïÑÔÇøÓòµÄÉèÖÃ 
-	free(old_locale);//»¹Ô­ÇøÓòÉè¶¨	
+	setlocale(LC_CTYPE, old_locale); //è¿˜åŸè¯­è¨€åŒºåŸŸçš„è®¾ç½® 
+	free(old_locale);//è¿˜åŸåŒºåŸŸè®¾å®š	
 
 	/*
 	if (fdelete) {
@@ -1085,8 +1095,8 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 			TRACE(_T("open changlist file failed\r\n"));
 			return 0;
 		}
-		LONGLONG ansifilelen = fw.GetLength();//»ñµÃansi±àÂëÎÄ¼şµÄÎÄ¼ş³¤¶È
-		char *p = new char[ansifilelen + 1];//newÒ»¿éĞÂÄÚ´æ
+		LONGLONG ansifilelen = fw.GetLength();//è·å¾—ansiç¼–ç æ–‡ä»¶çš„æ–‡ä»¶é•¿åº¦
+		char *p = new char[ansifilelen + 1];//newä¸€å—æ–°å†…å­˜
 		fw.Read(p, (int)ansifilelen);
 		p[ansifilelen] = '\0';
 		fw.Close();
@@ -1146,7 +1156,7 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 						BOOL FLAG = PathFileExists(fstr);
 						if (!FLAG)
 						{
-							//AfxMessageBox(L"²»´æÔÚ¸ÃÎÄ¼ş:"+fstr);							
+							//AfxMessageBox(L"ä¸å­˜åœ¨è¯¥æ–‡ä»¶:"+fstr);							
 						}
 						else {
 							CFile::Rename(fstr, rfstr);// there is no return value to know wether fail or success
@@ -1227,8 +1237,8 @@ int CMFCApplication1Dlg::DoChangeFileName(CString cstrChFileList, int fdelete)
 		fw.Close();
 	}
 	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //»¹Ô­ÓïÑÔÇøÓòµÄÉèÖÃ 
-	free(old_locale);//»¹Ô­ÇøÓòÉè¶¨	
+	setlocale(LC_CTYPE, old_locale); //è¿˜åŸè¯­è¨€åŒºåŸŸçš„è®¾ç½® 
+	free(old_locale);//è¿˜åŸåŒºåŸŸè®¾å®š	
 
 					 /*
 					 if (fdelete) {
@@ -1338,8 +1348,8 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 		fs.Write(cp, (UINT)strlen(cp));
 	}
 	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //»¹Ô­ÓïÑÔÇøÓòµÄÉèÖÃ 
-	free(old_locale);//»¹Ô­ÇøÓòÉè¶¨	
+	setlocale(LC_CTYPE, old_locale); //è¿˜åŸè¯­è¨€åŒºåŸŸçš„è®¾ç½® 
+	free(old_locale);//è¿˜åŸåŒºåŸŸè®¾å®š	
 
 	return 0;
 }
@@ -1347,7 +1357,7 @@ int CMFCApplication1Dlg::unDoChangeFileName()
 
 void CMFCApplication1Dlg::OnBnClickedButton8()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	unDoChangeFileName();
 }
 
@@ -1362,9 +1372,9 @@ int CMFCApplication1Dlg::creatIdentifyProcess()
 
 	if (!my_CreateProcess(cstrSearchexeName)) {
 
-		CloseHandle(m_hPipeWriteParentDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteParentDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadParentDetect);
-		CloseHandle(m_hPipeWriteChildDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteChildDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadChildDetect);
 		
 		str = _T("CREATE PROCESS FAILED, restar search again\r\n");
@@ -1389,9 +1399,9 @@ int CMFCApplication1Dlg::createDetectProcess()
 	//ColseChildProcess();
 	if (!my_CreateProcess(cstrDarkexeName)) {
 
-		CloseHandle(m_hPipeWriteParentDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteParentDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadParentDetect);
-		CloseHandle(m_hPipeWriteChildDetect);	//´´½¨½ø³ÌÊ§°Ü£¬¹Ø±Õ¶ÁĞ´¾ä±ú
+		CloseHandle(m_hPipeWriteChildDetect);	//åˆ›å»ºè¿›ç¨‹å¤±è´¥ï¼Œå…³é—­è¯»å†™å¥æŸ„
 		CloseHandle(m_hPipeReadChildDetect);
 
 		str = _T("CREATE PROCESS FAILED, restar darknet_no_gpu again\r\n");
@@ -1426,7 +1436,7 @@ void CMFCApplication1Dlg::getGalleryFileList(CString cstrGFile,CString cstrGDir)
 
 void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout)
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	// create cstrIListFile,modify tempChangFile according to the cstrDetctedFile
 	// rename
 	CString rstr;
@@ -1553,22 +1563,22 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 		}
 	}
 	fs.Close();
-	setlocale(LC_CTYPE, old_locale); //»¹Ô­ÓïÑÔÇøÓòµÄÉèÖÃ 
-	free(old_locale);//»¹Ô­ÇøÓòÉè¶¨
+	setlocale(LC_CTYPE, old_locale); //è¿˜åŸè¯­è¨€åŒºåŸŸçš„è®¾ç½® 
+	free(old_locale);//è¿˜åŸåŒºåŸŸè®¾å®š
 
 }
 
 
 void CMFCApplication1Dlg::OnBnClickedButton9()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	doListToChange(cstrIdentifiedFile, NULL);
 }
 
 
 void CMFCApplication1Dlg::OnBnClickedButton10()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	autoFlg = 1;
 	OnBnClickedButton1();
 	OnBnClickedButtonDetect();
@@ -1611,7 +1621,7 @@ char * CMFCApplication1Dlg::myT2A(CString cstrT2A)
 
 void CMFCApplication1Dlg::OnBnClickedButton12()
 {
-	// TODO: ÔÚ´ËÌí¼Ó¿Ø¼şÍ¨Öª´¦Àí³ÌĞò´úÂë
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
 	mEdit1 = _T("");
 	UpdateData(false);
 }
@@ -1653,7 +1663,7 @@ void CMFCApplication1Dlg::closepid(int pid)
 {
 	HANDLE hProcess;
 	DWORD dwPriorityClass;
-	//´ò¿ª½ø³Ì¾ä±ú  
+	//æ‰“å¼€è¿›ç¨‹å¥æŸ„  
 	hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
 	if (hProcess == NULL) return;
 	dwPriorityClass = GetPriorityClass(hProcess);
@@ -1669,4 +1679,183 @@ void CMFCApplication1Dlg::dopreexit()
 	ColseChildProcess();
 	TerminateThread(m_hThread, 0);
 
+}
+
+UINT kmsServerThread(LPVOID pParam)
+{
+	CMFCApplication1Dlg *pthis = (CMFCApplication1Dlg *)pParam;
+	// åˆ›å»ºsocket server ,port 50053
+	CSocket aSocket, serverSocket;
+	//æœ€å¥½ä¸è¦ä½¿ç”¨aSocket.Createåˆ›å»ºï¼Œå› ä¸ºå®¹æ˜“ä¼šå‡ºç°10048é”™è¯¯
+	if (!aSocket.Socket())
+	{
+		char szError[256] = { 0 };
+
+		//sprintf(szError, _T("Create Faild:?%d"), GetLastError());
+
+		//AfxMessageBox(szError);
+
+		return 1;
+	}
+
+	BOOL bOptVal = TRUE;
+	int bOptLen = sizeof(BOOL);
+
+	//è®¾ç½®Socketçš„é€‰é¡¹, è§£å†³10048é”™è¯¯å¿…é¡»çš„æ­¥éª¤
+	aSocket.SetSockOpt(SO_REUSEADDR, (void *)&bOptVal, bOptLen, SOL_SOCKET);
+	//ç»‘å®šç«¯å£
+	if (!aSocket.Bind(0))
+	{
+		char szError[256] = { 0 };
+		//sprintf(szError, "BindÂ Faild:Â %d", GetLastError());
+		return 1;
+	}
+	//ç›‘å¬
+	if (!aSocket.Listen(10))
+	{
+		char szError[256] = { 0 };
+
+		//sprintf(szError, "Listen?Faild: %d", GetLastError());
+
+		//AfxMessageBox(szError);
+
+		return 1;
+	}
+
+	CString strText;
+	strText += "Server Start!";
+	while (1)
+	{
+		//æ¥æ”¶å¤–éƒ¨è¿æ¥
+		if (!aSocket.Accept(serverSocket))
+		{
+			continue;
+		}
+		else
+		{
+			char szRecvMsg[256] = { 0 };
+			char szOutMsg[256] = { 0 };
+
+			//æ¥æ”¶å®¢æˆ·ç«¯å†…å®¹:é˜»å¡
+			serverSocket.Receive(szRecvMsg, 256);
+			//sprintf(szOutMsg, "Receive Msg: %s", szRecvMsg);
+			strText += szOutMsg;
+			//å‘é€å†…å®¹ç»™å®¢æˆ·ç«¯
+			serverSocket.Send("Have Receive The Msg", 50);
+			//å…³é—­
+			serverSocket.Close();
+		}
+	}
+
+	//å…³é—­
+	aSocket.Close();
+	serverSocket.Close();
+
+
+
+	CString cstrt;
+	for (int i = 0; i < 3; i++) {
+		cstrt.Format(_T("%d"), i);
+		AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_KMS)->SetWindowText(cstrt);
+
+		Sleep(1000);
+	}
+	cstrt = _T("test end");
+	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_KMS)->SetWindowText(cstrt);
+	AfxEndThread(0, TRUE);
+	return 0;   // thread completed successfully
+}
+
+
+
+void CMFCApplication1Dlg::OnBnClickedButton11()
+{
+	// TODO: åœ¨æ­¤æ·»åŠ æ§ä»¶é€šçŸ¥å¤„ç†ç¨‹åºä»£ç 
+	// åˆ›å»ºsocket server çº¿ç¨‹
+	
+	//AfxBeginThread(kmsServerThread,this);
+
+	CString cstrt,cstrshow;
+	PIP_ADAPTER_INFO pIpAdapterInfo = new IP_ADAPTER_INFO();// PIP_ADAPTER_INFOç»“æ„ä½“æŒ‡é’ˆå­˜å‚¨æœ¬æœºç½‘å¡ä¿¡æ¯
+	unsigned long stSize = sizeof(IP_ADAPTER_INFO);// å¾—åˆ°ç»“æ„ä½“å¤§å°,ç”¨äºGetAdaptersInfoå‚æ•°
+	int netCardNum = 0;// è®°å½•ç½‘å¡æ•°é‡ 
+	int IPnumPerNetCard = 0; // è®°å½•æ¯å¼ ç½‘å¡ä¸Šçš„IPåœ°å€æ•°é‡
+
+							 //è°ƒç”¨GetAdaptersInfoå‡½æ•°,å¡«å……pIpAdapterInfoæŒ‡é’ˆå˜é‡;å…¶ä¸­stSizeå‚æ•°æ—¢æ˜¯ä¸€ä¸ªè¾“å…¥é‡ä¹Ÿæ˜¯ä¸€ä¸ªè¾“å‡ºé‡
+	int nRel = GetAdaptersInfo(pIpAdapterInfo, &stSize);
+	if (ERROR_BUFFER_OVERFLOW == nRel)
+	{
+		delete pIpAdapterInfo;
+		pIpAdapterInfo = (PIP_ADAPTER_INFO)new BYTE[stSize]; // é‡æ–°ç”³è¯·å†…å­˜ç©ºé—´ç”¨æ¥å­˜å‚¨æ‰€æœ‰ç½‘å¡ä¿¡æ¯
+		nRel = GetAdaptersInfo(pIpAdapterInfo, &stSize);//å†æ¬¡è°ƒç”¨GetAdaptersInfoå‡½æ•°,å¡«å……pIpAdapterInfoæŒ‡é’ˆå˜é‡ Â 
+	}
+	cstrshow.Append(_T("GetAdaptersInfo:\r\n"));
+	if (ERROR_SUCCESS == nRel)
+	{
+		while (pIpAdapterInfo)
+		{
+			cstrt.Format(_T("\r\nâ”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€Num.%dâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”\r\n"), ++netCardNum);
+			cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Nameï¼š%s\r\n"), pIpAdapterInfo->AdapterName);
+			cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Descï¼š%s\r\n"), pIpAdapterInfo->Description);
+			switch (pIpAdapterInfo->Type)
+			{
+			case MIB_IF_TYPE_OTHER:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šOTHER\r\n"));
+				break;
+			case MIB_IF_TYPE_ETHERNET:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šETHERNET\r\n"));
+				break;
+			case MIB_IF_TYPE_TOKENRING:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šTOKENRING\r\n"));
+				break;
+			case MIB_IF_TYPE_FDDI:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šFDDI\r\n"));
+				break;
+			case MIB_IF_TYPE_PPP:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šPPP\r\n"));
+				break;
+			case MIB_IF_TYPE_LOOPBACK:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šLOOPBACK\r\n"));
+				break;
+			case MIB_IF_TYPE_SLIP:
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Typeï¼šSLIP\r\n"));
+				break;
+			default:
+				break;
+			}
+
+			cstrshow.Append(cstrt);cstrt.Format(_T("â”‚MAC:"));
+			for (DWORD i = 0; i < pIpAdapterInfo->AddressLength; i++)
+			{
+				if (i < pIpAdapterInfo->AddressLength - 1)
+				{
+					cstrshow.Append(cstrt);cstrt.Format(_T("%02X:"), pIpAdapterInfo->Address[i]);
+				}
+				else
+				{
+					cstrshow.Append(cstrt);cstrt.Format(_T("%02X\r\n"), pIpAdapterInfo->Address[i]);
+				}
+			}
+			//å¯èƒ½ç½‘å¡æœ‰å¤šIP,å› æ­¤é€šè¿‡å¾ªç¯å»åˆ¤æ–­
+			IP_ADDR_STRING *pIpAddrString = &(pIpAdapterInfo->IpAddressList);
+			do
+			{
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚IPï¼š%s\r\n"), pIpAddrString->IpAddress.String);
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚MASKï¼š%s\r\n"), pIpAddrString->IpMask.String);
+				cstrshow.Append(cstrt);cstrt.Format(_T("â”‚Gateï¼š%s\r\n"), pIpAdapterInfo->GatewayList.IpAddress.String);
+				pIpAddrString = pIpAddrString->Next;
+			} while (pIpAddrString);
+			pIpAdapterInfo = pIpAdapterInfo->Next;
+			cstrshow.Append(cstrt);cstrt.Format(_T("â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜\r\n"));
+			cstrshow.Append(cstrt);
+		}
+
+	}
+	//é‡Šæ”¾å†…å­˜ç©ºé—´
+	if (pIpAdapterInfo)
+	{
+		delete pIpAdapterInfo;
+	}
+	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SetWindowText(cstrshow);
+	
 }
