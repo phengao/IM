@@ -1349,7 +1349,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *listnam
         double time = get_time_point();
         network_predict(net, X);
         //network_predict_image(&net, im); letterbox = 1;
-        printf("%s: Predicted in %lf milli-seconds.\n", input, ((double)get_time_point() - time) / 1000);
+        //printf("%s: Predicted in %lf milli-seconds.\n", input, ((double)get_time_point() - time) / 1000);
         //printf("%s: Predicted in %f seconds.\n", input, (what_time_is_it_now()-time));
 
         int nboxes = 0;
@@ -1364,7 +1364,7 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *listnam
 			const int best_class = selected_detections[i].best_class;
 			printf("%s: %.0f%%\n", names[best_class], selected_detections[i].det.prob[best_class] * 100);
 			fflush(stdout);
-			if (selected_detections[i].det.prob[best_class] > 0.6) {// threshold
+			if (selected_detections[i].det.prob[best_class] > 0.7) {
 				fprintf(fpw, "\x09%s-%f4", names[best_class], selected_detections[i].det.prob[best_class]);
 			}
 		}
