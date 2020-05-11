@@ -50,6 +50,13 @@ using namespace std;
 #endif
 
 
+CSocket cSocket;
+CSocket aSocket, serverSocket;
+
+SOCKET ListenSocket = INVALID_SOCKET;
+SOCKET ClientSocket = INVALID_SOCKET;
+SOCKET ConnectSocket = INVALID_SOCKET;
+
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
 class CAboutDlg : public CDialogEx
@@ -1575,134 +1582,239 @@ CString CMFCApplication1Dlg::getNetInfo(CString &cstrshow)
 DWORD WINAPI  CMFCApplication1Dlg::kmsClientThread(LPVOID pParam)
 {
 	CMFCApplication1Dlg *pthis = (CMFCApplication1Dlg *)pParam;
-	//初始化
-	AfxSocketInit();
+	WSADATA wsaData;
 
-	//创建 CSocket 对象
-	//CSocket aSocket;
-	CString strIP=_T("192.168.28.21");
-	CString strPort;
-	CString strText;
+	struct addrinfo *result = NULL,
+		*ptr = NULL,
+		hints;
+	const char *sendbuf = "this is a test";
+	char recvbuf[512];
+	int iResult;
+	int recvbuflen = 512;
 
-	//初始化 CSocket 对象, 因为客户端不需要绑定任何端口和地址, 所以用默认参数即可
-	if (!pthis->cSocket.Create())
-	{
-		char szMsg[1024] = { 0 };
-		return 0;
+	// Initialize Winsock
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) {
+		printf("WSAStartup failed with error: %d\n", iResult);
+		return 1;
 	}
 
-	//转换需要连接的端口内容类型
-	int nPort = 1688;
-	//SCOKADDR 
-	char ip[20];
-	//连接指定的地址和端口
-	int len = 0;
-	if (pthis->cSocket.Connect((LPCTSTR)strIP, nPort))
-	{
-		char szRecValue[1024] = { 0 };
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
 
-		//发送内容给服务器
-		//cSocket.Send(strText, strText.GetLength());
-		while (1) {
-			//接收服务器发送回来的内容(该方法会阻塞, 在此等待有内容接收到才继续向下执行)
-			len = pthis->cSocket.Receive((void *)szRecValue, 1024);
-			if (len > 0) {
-				//if (serverSocket)
-				pthis->serverSocket.Send(szRecValue, len);
-				pthis->cSocket.Send(szRecValue, len);
-			}
-			else {
-				break;
-			}
+	// Resolve the server address and port
+	iResult = getaddrinfo("192.168.28.21", "1688", &hints, &result);
+	if (iResult != 0) {
+		printf("getaddrinfo failed with error: %d\n", iResult);
+		WSACleanup();
+		return 1;
+	}
+
+	// Attempt to connect to an address until one succeeds
+	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+
+		// Create a SOCKET for connecting to server
+		ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype,
+			ptr->ai_protocol);
+		if (ConnectSocket == INVALID_SOCKET) {
+			printf("socket failed with error: %ld\n", WSAGetLastError());
+			WSACleanup();
+			return 1;
 		}
-	}
-	else
-	{
-		char szMsg[1024] = { 0 };
+
+		// Connect to server.
+		iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+		if (iResult == SOCKET_ERROR) {
+			closesocket(ConnectSocket);
+			ConnectSocket = INVALID_SOCKET;
+			continue;
+		}
+		break;
 	}
 
-	//关闭
-	pthis->cSocket.Close();
+	freeaddrinfo(result);
+
+	if (ConnectSocket == INVALID_SOCKET) {
+		printf("Unable to connect to server!\n");
+		WSACleanup();
+		return 1;
+	}
+
+	// Send an initial buffer
+	///iResult = send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0);
+	///if (iResult == SOCKET_ERROR) {
+///		printf("send failed with error: %d\n", WSAGetLastError());
+	///	closesocket(ConnectSocket);
+///		WSACleanup();
+///		return 1;
+	///}
+
+	///printf("Bytes Sent: %ld\n", iResult);
+
+	// shutdown the connection since no more data will be sent
+	///iResult = shutdown(ConnectSocket, SD_SEND);
+	///if (iResult == SOCKET_ERROR) {
+		///printf("shutdown failed with error: %d\n", WSAGetLastError());
+		///closesocket(ConnectSocket);
+		///WSACleanup();
+		///return 1;
+	///}
+
+	// Receive until the peer closes the connection
+	do {
+
+		iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+		if (iResult > 0) {
+			printf("Bytes received: %d\n", iResult);
+			iResult = send(ConnectSocket, recvbuf, iResult, 0);
+			if (ClientSocket != INVALID_SOCKET)
+				iResult = send(ClientSocket, recvbuf, iResult, 0);
+			
+		}
+		else if (iResult == 0)
+			printf("Connection closed\n");
+		else
+			printf("recv failed with error: %d\n", WSAGetLastError());
+
+	} while (iResult > 0);
+
+	// cleanup
+	closesocket(ConnectSocket);
+	if (ConnectSocket != INVALID_SOCKET)
+		ConnectSocket = INVALID_SOCKET;
+	WSACleanup();
+	return 0;
 }
 
 
-DWORD WINAPI  CMFCApplication1Dlg::kmsServerThread(LPVOID pParam)
+DWORD WINAPI  CMFCApplication1Dlg::kmsServerThreadWS2(LPVOID pParam)
 {
 	CMFCApplication1Dlg *pthis = (CMFCApplication1Dlg *)pParam;
 	// 创建socket server ,port 50053
-	if (!AfxSocketInit())
-	{
-		//AfxMessageBox(IDP_SOCKETS_INIT_FAILED);
-		return 1;
-	}
-	
-	//最好不要使用aSocket.Create创建，因为容易会出现10048错误
-	if (!pthis->aSocket.Socket())
-	{
-		char szError[256] = { 0 };
-		return 1;
-	}
 
-	BOOL bOptVal = TRUE;
-	int bOptLen = sizeof(BOOL);
+	WSADATA wsaData;
+	int iResult;
 
-	//设置Socket的选项, 解决10048错误必须的步骤
-	pthis->aSocket.SetSockOpt(SO_REUSEADDR, (void *)&bOptVal, bOptLen, SOL_SOCKET);
-	//绑定端口
+	struct addrinfo *result = NULL;
+	struct addrinfo hints;
 
-	CString cs,cstrip;
-	cstrip = pthis->getNetInfo(cs);
-	char cp[100];
-	pthis->ST2A(cstrip, cp, sizeof(cp));
-	if (!pthis->aSocket.Bind(50053))// , cp))
-	{
-		char szError[256] = { 0 };
-		return 1;
-	}
-	//监听
-	if (!pthis->aSocket.Listen(10))
-	{
-		char szError[256] = { 0 };
+	int iSendResult;
+	char recvbuf[512];
+	int recvbuflen = 512;
+
+	// Initialize Winsock
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != 0) {
+		printf("WSAStartup failed with error: %d\n", iResult);
 		return 1;
 	}
 
-	CString cstrt;
-	cstrt = "Server Start!";
-	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_KMS)->SetWindowText(cstrt);
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags = AI_PASSIVE;
 
-	if (!pthis->aSocket.Accept(pthis->serverSocket))
-	{
+	// Resolve the server address and port
+	iResult = getaddrinfo("192.168.28.21", "50053", &hints, &result);
+	if (iResult != 0) {
+		printf("getaddrinfo failed with error: %d\n", iResult);
+		WSACleanup();
+		return 1;
 	}
-	else
-	{
-		//AfxBeginThread(kmsClientThread, pthis);
-		while (1)
-		{
-			//接收外部连接
-			char szRecvMsg[256] = { 0 };
-			TCHAR tc[256] = { 0 };
 
-			//接收客户端内容:阻塞
-			int len = pthis->serverSocket.Receive(szRecvMsg, 256);
-			if ( len > 0) {
+	// Create a SOCKET for connecting to server
+	ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	if (ListenSocket == INVALID_SOCKET) {
+		printf("socket failed with error: %ld\n", WSAGetLastError());
+		freeaddrinfo(result);
+		WSACleanup();
+		return 1;
+	}
 
-				//sprintf(szOutMsg, "Receive Msg: %s", szRecvMsg);
-				cstrt = pthis->SA2T(szRecvMsg, tc, sizeof(tc));
-				//发送内容给客户端
-				pthis->serverSocket.Send(szRecvMsg, len);
-				//关闭
-				pthis->cSocket.Send(szRecvMsg, len);
+	// Setup the TCP listening socket
+	iResult = ::bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
+	if (iResult == SOCKET_ERROR) {
+		printf("bind failed with error: %d\n", WSAGetLastError());
+		freeaddrinfo(result);
+		closesocket(ListenSocket);
+		WSACleanup();
+		return 1;
+	}
 
-				AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_KMS)->SetWindowText(cstrt);
+	freeaddrinfo(result);
+
+	iResult = listen(ListenSocket, SOMAXCONN);
+	if (iResult == SOCKET_ERROR) {
+		printf("listen failed with error: %d\n", WSAGetLastError());
+		closesocket(ListenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	// Accept a client socket
+	ClientSocket = accept(ListenSocket, NULL, NULL);
+	if (ClientSocket == INVALID_SOCKET) {
+		printf("accept failed with error: %d\n", WSAGetLastError());
+		closesocket(ListenSocket);
+		WSACleanup();
+		return 1;
+	}
+
+	// No longer need server socket
+	closesocket(ListenSocket);
+	ListenSocket = INVALID_SOCKET;
+
+	HANDLE hThread = CreateThread(NULL, 0, kmsClientThread, (LPVOID)pthis, 0, NULL);
+	// Receive until the peer shuts down the connection
+	do {
+
+		iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
+		if (iResult > 0) {
+			printf("Bytes received: %d\n", iResult);
+
+			// Echo the buffer back to the sender
+			iSendResult = send(ClientSocket, recvbuf, iResult, 0);
+			if(ConnectSocket!=INVALID_SOCKET)
+				iSendResult = send(ConnectSocket, recvbuf, iResult, 0);
+
+			if (iSendResult == SOCKET_ERROR) {
+				printf("send failed with error: %d\n", WSAGetLastError());
+				closesocket(ClientSocket);
+				WSACleanup();
+				return 1;
 			}
-			else
-				break;
+			printf("Bytes sent: %d\n", iSendResult);
 		}
+		else if (iResult == 0)
+			printf("Connection closing...\n");
+		else {
+			printf("recv failed with error: %d\n", WSAGetLastError());
+			closesocket(ClientSocket);
+			WSACleanup();
+			return 1;
+		}
+
+	} while (iResult > 0);
+
+	// shutdown the connection since we're done
+	iResult = shutdown(ClientSocket, SD_SEND);
+	if (iResult == SOCKET_ERROR) {
+		printf("shutdown failed with error: %d\n", WSAGetLastError());
+		closesocket(ClientSocket);
+		WSACleanup();
+		return 1;
 	}
-	//pthis->serverSocket.Close();
-	//关闭
-	pthis->aSocket.Close();
-	pthis->serverSocket.Close();
+
+	// cleanup
+	closesocket(ClientSocket);
+	ClientSocket = INVALID_SOCKET;
+	WSACleanup();
+
+	TerminateThread(hThread, 0);
+
 
 	AfxEndThread(0, TRUE);
 	return 0;   // thread completed successfully
@@ -1717,7 +1829,8 @@ void CMFCApplication1Dlg::OnBnClickedButton11()
 	//getNetInfo(cs);
 	AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_EDIT1)->SetWindowText(cs);
 	//AfxBeginThread(kmsServerThread,this);
-	CreateThread(NULL, 0, kmsServerThread, (LPVOID)this, 0, NULL);
+	//CreateThread(NULL, 0, kmsServerThread, (LPVOID)this, 0, NULL);
+	CreateThread(NULL, 0, kmsServerThreadWS2, (LPVOID)this, 0, NULL);
 }
 
 

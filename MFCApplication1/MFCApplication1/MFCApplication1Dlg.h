@@ -152,8 +152,8 @@ public:
 	static DWORD WINAPI  CMFCApplication1Dlg::kmsServerThread(LPVOID pParam);
 	static DWORD WINAPI  CMFCApplication1Dlg::kmsClientThread(LPVOID pParam);
 	char mExflg = 0;
-	CSocket cSocket;
-	CSocket aSocket, serverSocket;
+
 	afx_msg void OnBnClickedButton14();
+	static DWORD WINAPI  CMFCApplication1Dlg::kmsServerThreadWS2(LPVOID pParam);
 };
 
