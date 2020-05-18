@@ -553,6 +553,7 @@ bool CMFCApplication1Dlg::my_CreateProcess(CString epath)
 	//BOOL kk = CreateProcess(epath, NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, wpath, &si, &pi);
 	CString cstrdir = getWorkDir();
 	//cstrdir.Replace(_T('\\'), _T('/'));
+	epath = cstrdir + _T("\\") + epath;
 	BOOL kk = CreateProcess(epath, NULL, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, cstrdir, &si, &pi);
 	if (!kk)
 	{
@@ -626,10 +627,15 @@ DWORD WINAPI CMFCApplication1Dlg::Pipe_Listen(LPVOID lpParameter)
 				pthis->fileGrow += nCount;
 
 			long needTime = (pthis->clockCurrent - pthis->clockStart) * (pthis->fileCount - pthis->fileGrow) / pthis->fileGrow / CLOCKS_PER_SEC;
+			if(needTime!=0)
+				cstrProgress.Format(_T("%s  %d/%d ¡¾%02d:%02d:%02d¡¿ %s")
+					, pthis->cstrStatichead.GetBuffer(), pthis->fileGrow, pthis->fileCount
+					, needTime / 3600, (needTime % 3600) / 60, (needTime % 60), strd.Right(strd.GetLength() - npos - 15).GetBuffer());
+			else
+				cstrProgress.Format(_T("%s  %d/%d ¡¾Íê³É¡¿ %s")
+					, pthis->cstrStatichead.GetBuffer(), pthis->fileGrow, pthis->fileCount
+					, strd.Right(strd.GetLength() - npos - 15).GetBuffer());
 
-			cstrProgress.Format(_T("%s  %d/%d ¡¾%02d:%02d:%02d¡¿ %s")
-								, pthis->cstrStatichead.GetBuffer(), pthis->fileGrow, pthis->fileCount
-								,needTime/3600,(needTime%3600)/60,(needTime%60), strd.Right(strd.GetLength() - npos - 15).GetBuffer());
 			cstrProgress.Replace(pthis->mEditFolderName, _T("\x7e"));
 			AfxGetApp()->m_pMainWnd->GetDlgItem(IDC_STATIC_PROGRESS)->SetWindowText(cstrProgress);
 		}
@@ -1358,7 +1364,7 @@ void CMFCApplication1Dlg::doListToChange(CString cstrListin, CString cstrListout
 				}
 				cfw.Close();
 				DoChangeFileName(tempChangFile, 1);
-				CFile::Remove(tempChangFile);
+				//CFile::Remove(tempChangFile);
 				break;
 			}
 		}

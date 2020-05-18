@@ -277,7 +277,7 @@ int identify_pic() {
 			ofs.write(strrus.c_str(), strlen(strrus.c_str()));
 
 
-			char showflg = 1;
+			char showflg = 0;
 
 			if (showflg) {
 				cv::namedWindow("Compare_Result", 0);
