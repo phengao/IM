@@ -123,6 +123,8 @@ CMFCApplication1Dlg::CMFCApplication1Dlg(CWnd* pParent /*=NULL*/)
 		cstrChangeFile = cstrWorkDir + _T("\\") + cstrChangeFile;
 		///cstrDarkexeName = strdebug + _T("\\..\\x64\\release\\darknet_no_gpu.exe");
 		///cstrSearchexeName = strdebug + _T("\\..\\x64\\release\\search.exe");
+
+		cstrTestFile = cstrWorkDir + _T("\\") + cstrTestFile;
 	}
 
 	strAllFile = _T("");
@@ -312,7 +314,6 @@ void CMFCApplication1Dlg::OnBnClickedButton1()
 	//AfxMessageBox(_T("finish"));
 	m_button1.EnableWindow(true);
 }
-unsigned long ulcont = 0;
 void CMFCApplication1Dlg::TravelFolder(CString strDir, CFile* fp)
 {
 	CFileFind filefind;                                         //声明CFileFind类型变量
@@ -707,17 +708,184 @@ void CMFCApplication1Dlg::OnBnClickedButtonStop()
 	mEdit1 += _T("P[") + str + _T("]\r\n");
 	UpdateData(false);
 }
+int GST2A(CString cstrSrc, char *cp, int maxlen)// &cp use the origin cp from calling.
+{
+	memset(cp, 0, maxlen);
+	int wlen = WideCharToMultiByte(CP_ACP, 0, cstrSrc, cstrSrc.GetLength(), NULL, 0, NULL, NULL);
+	if (wlen > maxlen) {
+		wlen = maxlen - 1;
+	}
+	WideCharToMultiByte(CP_ACP, 0, cstrSrc, cstrSrc.GetLength(), cp, wlen, NULL, NULL);
+	///cp[wlen] = '\0';
+	return(wlen);
+}
+const int THREAD_NUM = 10;
+int g_Num = 0;
+CRITICAL_SECTION g_csVar; //创建关键段cs
+HANDLE g_ThreadSema;  //创建内核对象，用来初始化信号量
+CFile g_fp;
+int g_ldPathCnt = 0;
 
+DWORD WINAPI Func(LPVOID p)
+{
+	int nThreadNum = *(int*)p;
+	EnterCriticalSection(&g_csVar);
+	cout << "线程编号为： " << nThreadNum << " 全局资源值为：" << ++g_Num << endl;
+	LeaveCriticalSection(&g_csVar);
+	ReleaseSemaphore(g_ThreadSema, 1, NULL);  //信号量资源数加一
+	return 0;
+}
+
+DWORD WINAPI CMFCApplication1Dlg::TravelFolderThread(LPVOID p)
+{
+	CFileFind filefind;                                         //声明CFileFind类型变量
+	CFile file;
+	char cp[MAX_PATH * 2 + 2 + 1];
+
+	CString strDir = *((CString *)p);
+	delete(p);
+
+	CString strWildpath = strDir + _T("\\*.*");     //所有jpg文件都列出。
+
+	if (filefind.FindFile(strWildpath, 0))                    //开始检索文件
+	{
+		BOOL bRet = TRUE;
+
+		while (bRet)
+		{
+			bRet = filefind.FindNextFile();                 //枚举一个文件            
+
+			if (filefind.IsDots())                                 //如果是. 或 .. 做下一个
+			{
+				continue;
+			}
+
+			// 文件名 begin
+			CString strFileName = filefind.GetFileName();
+			CString strLastName = strFileName.Right(strFileName.GetLength() - strFileName.ReverseFind('.') - 1);
+			// 文件名 end
+
+			// 文件修改时间 begin
+			FILETIME   filetime;
+			FILETIME   localtime;
+			SYSTEMTIME systemtime;
+
+			filefind.GetLastWriteTime(&filetime);
+
+			FileTimeToLocalFileTime(&filetime, &localtime); //换成本地时间
+
+			FileTimeToSystemTime(&localtime, &systemtime);  //换成系统时间格式
+
+			CString strTime = _T("");
+			strTime.Format(_T("%04d%02d%02d%02d%02d%02d"),
+				systemtime.wYear, systemtime.wMonth, systemtime.wDay,
+				systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
+
+			CString strlen;
+			strlen.Format(_T("%I64d"), filefind.GetLength());
+
+			CString strFilePath = (LPCTSTR)filefind.GetFilePath();
+
+			CString strwrite;
+			//strwrite = strFileName + _T("\x09") + strDir + _T("\x09") + strlen + _T("\x09");
+			strwrite = strDir + _T("\\") + strFileName;
+
+			// 文件修改时间 end            
+			if (!filefind.IsDirectory())                          //不是子目录，把文件名打印出来
+			{
+				//filter: jpg only;
+				CString strLastName = strFileName.Right(strFileName.GetLength() - strFileName.ReverseFind('.') - 1).MakeLower();
+				if (strLastName.Find(_T("jpg")) == -1)
+					continue;
+				strwrite += _T("\r\n");
+				int len = CStringA(strwrite).GetLength();
+				//strwrite.Replace(_T('\\'), _T('/'));
+
+				///USES_CONVERSION;
+				///char* cp = T2A(strwrite);
+				GST2A(strwrite, cp, sizeof(cp));
+
+				EnterCriticalSection(&g_csVar); 
+				g_fp.Write(cp, len);
+				LeaveCriticalSection(&g_csVar);
+
+			}
+			else                                                   //如果是子目录，递归调用该函数
+			{
+				CString strNewDir = strDir + CString(_T("\\")) + filefind.GetFileName();
+				EnterCriticalSection(&g_csVar);
+				g_ldPathCnt++;
+				CString *p = new CString;
+				*p = strNewDir;
+				LeaveCriticalSection(&g_csVar);
+				CreateThread(NULL, 0, TravelFolderThread, p, 0, NULL);
+				//Sleep(100);
+
+				//TravelFolder(strNewDir, fp);//递归调用该函数打印子目录里的文件
+			}
+		}
+		filefind.Close();
+	}
+	EnterCriticalSection(&g_csVar);
+	g_ldPathCnt--;
+	LeaveCriticalSection(&g_csVar);
+
+	return 0;
+}
 
 void CMFCApplication1Dlg::OnBnClickedButtonIdentifyDefaul()
 {
-	// TODO: 在此添加控件通知处理程序代码
-	CString str;
-	str = "test";
-	my_SendDataPipe(str);
-	UpdateData(true);
-	mEdit1 += _T("P[") + str + _T("]\r\n");
-	UpdateData(false);
+	if (g_ldPathCnt != 0) {
+		CString show;
+		show.Format(_T("Thread num:%d"), g_ldPathCnt);
+		MessageBox(show, NULL, MB_OK);
+		return;
+	}
+	InitializeCriticalSection(&g_csVar);
+	g_ThreadSema = CreateSemaphore(NULL, 0, 1, NULL); //创建匿名信号量，初始资源为零，最大并发数为1，
+
+	HANDLE handle[THREAD_NUM];
+	DWORD ThreadId[THREAD_NUM];
+	int i = 0;
+
+	CString strdir = mEditFolderName;// "e:";
+
+	if (strdir == _T("")) {
+		MessageBox(_T("设置文件夹先"), NULL, MB_OK);
+		m_button1.EnableWindow(true);
+		return;
+	}
+	//TravelFolder(strdir, &fileList);
+	
+	if (!g_fp.Open(cstrTestFile, CFile::modeCreate | CFile::modeWrite))// create a empty file Filelist.txt
+	{
+		TRACE(_T("File could not be opened\n"));
+	}
+	//while (i < THREAD_NUM)
+	{
+		//handle[i] = 
+//		CreateThread(NULL, 0, TravelFolderThread, &strdir, 0, &ThreadId[i]);
+		EnterCriticalSection(&g_csVar);
+		g_ldPathCnt++;
+		CString *p = new CString;
+		*p = strdir;
+
+		LeaveCriticalSection(&g_csVar);
+
+		CreateThread(NULL, 0, TravelFolderThread,p, 0, NULL);
+		//Sleep(100);
+		//WaitForSingleObject(g_ThreadSema, INFINITE); //等待信号量资源数>0
+		i++;
+	}
+	//WaitForMultipleObjects(THREAD_NUM, handle, true, INFINITE);
+	///CloseHandle(g_ThreadSema); //销毁信号量
+	///DeleteCriticalSection(&g_csVar);//销毁关键段cs
+	///for (i = 0; i < THREAD_NUM; i++)
+	{
+		///CloseHandle(handle[i]);
+	}
+	//while (g_ldPathCnt);
+	return;
 }
 
 void CMFCApplication1Dlg::OnClose()
@@ -793,12 +961,19 @@ void CMFCApplication1Dlg::OnBnClickedChooseFolder()
 		dpath = mEditFolderName ;
 		dpath.Replace(_T("/"), _T("\\"));
 	}
-
+	pathSelected = _T(".");
+	TCHAR tc;
+	tc= dpath.GetBuffer()[dpath.GetLength() - 1];
+	//tc = tp[dpath.GetLength()-1];
+	if(tc==_T('\\'))
+		dpath = dpath + _T("*.jzwl");
+	else
+		dpath = dpath + _T("\\*.jzwl");
 	CFolderDialog dlg(&pathSelected,dpath);
 	if (dlg.DoModal() == IDOK)
 	{
 		mEditFolderName = pathSelected;
-		//mEditFolderName.Replace(_T("\\"), _T("/"));
+		mEditFolderName.Replace(_T("*.jzwl"), _T(""));
 		cfgRead(pszFileName);
 		CFGStr[0] = mEditFolderName;
 		cfgWrite(pszFileName, CFGStr);
@@ -1479,6 +1654,7 @@ void CMFCApplication1Dlg::dopreexit()
 	m_threadrun = 0;
 	ColseChildProcess();
 	TerminateThread(m_hThread, 0);
+	g_fp.Close();
 
 }
 
@@ -1494,6 +1670,8 @@ int CMFCApplication1Dlg::ST2A(CString cstrSrc,char *cp,int maxlen)// &cp use the
 	///cp[wlen] = '\0';
 	return(wlen);
 }
+
+
 
 CString CMFCApplication1Dlg::getNetInfo(CString &cstrshow)
 {

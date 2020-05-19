@@ -59,6 +59,7 @@ public:
 	void SetStartInfo(STARTUPINFO& si);				//初始化启动信息
 	void SetSecurity_attr(SECURITY_ATTRIBUTES& ps);	//初始化安全属性
 	static DWORD WINAPI Pipe_Listen(LPVOID lpParameter);	//接收管道数据线程
+	static DWORD WINAPI TravelFolderThread(LPVOID p);
 	afx_msg void OnBnClickedButtonIdentify();
 	afx_msg void OnBnClickedButtonDetect();
 	CString mEdit1;
@@ -89,6 +90,7 @@ public:
 	CString CFGStr[5];
 	CString pszFileName = _T("cfg.txt");
 
+	CString cstrTestFile = _T("Testlist.txt");// keep all files in the setting floder
 	//CString cstrListFile = _T("D:/imageManage/seetaface/src/Filelist.txt");// keep all files in the setting floder
 	CString cstrListFile = _T("Filelist.txt");// keep all files in the setting floder
 	//CString cstrDetctedFile = _T("D:/imageManage/seetaface/src/Detctedlist.txt");// keep all files detected results
